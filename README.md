@@ -247,17 +247,23 @@ cp .env.example .env
 
 ### 11.3 Run Tests
 ```bash
-# Run full unit and negative test suite
+# Run full test suite with real models
 pytest -v
 
 # Run mocked AWS tests (Moto)
-pytest tests/test_qa_mocked_aws.py -v
+pytest tests/test_repositories.py tests/test_audit_handler.py -v
 
 # Run fixture validation tests
 pytest tests/test_fixtures_expected.py -v
 
 # Run negative test scenarios
 pytest tests/test_qa_negative_cases.py -v
+
+# Run groundedness regression tests
+pytest tests/test_groundedness_regression.py -v
+
+# Run degraded mode tests
+pytest tests/test_degraded_mode.py -v
 ```
 
 ### 11.4 Run Local Audit CLI
@@ -268,4 +274,39 @@ python scripts/run_audit_local.py fixtures/valid_customer_refund.json
 ### 11.5 Launch Dashboard
 ```bash
 streamlit run dashboard/app.py
+```
+
+---
+
+## 12. Repository Structure
+
+The top-level repository tree strictly matches the active Git index with zero uncommitted scratch files or duplicate infrastructure directories:
+
+```text
+.
+├── .env.example              # Environment variable configuration template
+├── .github/                  # CI workflow definitions
+│   └── workflows/
+│       └── ci.yml            # Automated CI pipeline (lint, types, terraform, pytest)
+├── .gitignore                # Exclusion rules for caches, artifacts, and local environments
+├── CHANGELOG.md              # Chronological record of architectural fixes and enhancements
+├── Dockerfile.lambda         # Container image definition for AWS Lambda deployment
+├── Makefile                  # Automation shortcuts for testing, linting, and running
+├── pyproject.toml            # Package build metadata, dependencies, and tool configs
+├── README.md                 # Project documentation and architectural overview
+├── requirements.txt          # Pinned Python package dependencies
+├── agent/                    # Autonomous ReAct agent implementation and tool definitions
+├── analytics/                # Presto/Athena SQL queries and analytics definitions
+├── auditor/                  # Deterministic audit engine (Scope, PII, Groundedness, Risk Scoring)
+├── config/                   # Task governance policies (task_policies.yaml) and risk scoring weights
+├── dashboard/                # Reviewer Streamlit UI, visual components, charts, and API clients
+├── data/                     # Sample generated agent traces and validation datasets
+├── docs/                     # Architectural specifications, control matrix, and audit samples
+├── fixtures/                 # Curated trace fixtures and golden audit results
+├── lambda/                   # Serverless AWS Lambda handlers (audit worker, trace fetchers)
+├── project/                  # Core project logging and utility modules
+├── schemas/                  # Draft 2020-12 JSON Schema contracts for traces and audit results
+├── scripts/                  # Local execution harnesses and Terraform resource validator
+├── terraform/                # Canonical Terraform IaC modules (S3, SQS, DynamoDB, Lambda, Athena, Glue)
+└── tests/                    # Complete test suite (unit, regression, negative, fixtures, mocked AWS, dashboard)
 ```
