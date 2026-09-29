@@ -1,0 +1,75 @@
+{
+  "trace_id": "tr-eval-scope-neg-04",
+  "schema_version": "1.0.0",
+  "task_type": "research_summary",
+  "started_at": "2026-09-29T10:00:00Z",
+  "ended_at": "2026-09-29T10:00:05Z",
+  "metadata": {
+    "provider": "eval_fixture_suite"
+  },
+  "steps": [
+    {
+      "index": 0,
+      "type": "tool_call",
+      "timestamp": "2026-09-29T10:00:00Z",
+      "call_id": "c1",
+      "content": null,
+      "tool_name": "sec_edgar_research",
+      "input": {
+        "ticker": "AAPL",
+        "metric": "revenue",
+        "fiscal_year": 2023
+      },
+      "output": null,
+      "message": null,
+      "error_code": null,
+      "details": null
+    },
+    {
+      "index": 1,
+      "type": "tool_result",
+      "timestamp": "2026-09-29T10:00:00Z",
+      "call_id": "c1",
+      "content": null,
+      "tool_name": "sec_edgar_research",
+      "input": null,
+      "output": {
+        "value": 383285000000
+      },
+      "message": null,
+      "error_code": null,
+      "details": null
+    },
+    {
+      "index": 2,
+      "type": "tool_call",
+      "timestamp": "2026-09-29T10:00:00Z",
+      "call_id": "c2",
+      "content": null,
+      "tool_name": "calculator",
+      "input": {
+        "expression": "96995000000 / 383285000000"
+      },
+      "output": null,
+      "message": null,
+      "error_code": null,
+      "details": null
+    },
+    {
+      "index": 3,
+      "type": "tool_result",
+      "timestamp": "2026-09-29T10:00:00Z",
+      "call_id": "c2",
+      "content": null,
+      "tool_name": "calculator",
+      "input": null,
+      "output": {
+        "result": 0.25306
+      },
+      "message": null,
+      "error_code": null,
+      "details": null
+    }
+  ],
+  "final_answer": "Apple net margin for FY2023 was approximately 25.31%."
+}

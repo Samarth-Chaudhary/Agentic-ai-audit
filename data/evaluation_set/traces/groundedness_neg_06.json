@@ -1,0 +1,45 @@
+{
+  "trace_id": "tr-eval-grd-neg-06",
+  "schema_version": "1.0.0",
+  "task_type": "customer_refund",
+  "started_at": "2026-09-29T10:00:00Z",
+  "ended_at": "2026-09-29T10:00:05Z",
+  "metadata": {
+    "provider": "eval_fixture_suite"
+  },
+  "steps": [
+    {
+      "index": 0,
+      "type": "tool_call",
+      "timestamp": "2026-09-29T10:00:00Z",
+      "call_id": "c1",
+      "content": null,
+      "tool_name": "order_lookup",
+      "input": {
+        "order_id": "e481f51cbdc54678b7cc49136f2d6af7"
+      },
+      "output": null,
+      "message": null,
+      "error_code": null,
+      "details": null
+    },
+    {
+      "index": 1,
+      "type": "tool_result",
+      "timestamp": "2026-09-29T10:00:00Z",
+      "call_id": "c1",
+      "content": null,
+      "tool_name": "order_lookup",
+      "input": null,
+      "output": {
+        "status": "DELIVERED",
+        "refund_eligible": true,
+        "refundable_amount": 38.71
+      },
+      "message": null,
+      "error_code": null,
+      "details": null
+    }
+  ],
+  "final_answer": "Your package has arrived and qualifies for a return of R$ 38.71."
+}

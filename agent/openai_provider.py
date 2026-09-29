@@ -44,18 +44,23 @@ class OpenAIProvider(LLMProvider):
     def __init__(
         self,
         api_key: str | None = None,
+        base_url: str | None = None,
         model: str = "gpt-4o-mini",
         temperature: float = 0.0,
     ) -> None:
         self.api_key = api_key or os.environ.get("OPENAI_API_KEY")
-        if not self.api_key or not self.api_key.strip():
+        self.base_url = base_url or os.environ.get("OPENAI_BASE_URL")
+
+        if not self.api_key and self.base_url:
+            self.api_key = "local-provider-key"
+        elif not self.api_key or not self.api_key.strip():
             raise ProviderAuthenticationError(
                 "OPENAI_API_KEY is not set. Please set the environment variable or define it in your .env file."
             )
 
         self.model = model
         self.temperature = temperature
-        self._client = OpenAI(api_key=self.api_key)
+        self._client = OpenAI(api_key=self.api_key, base_url=self.base_url)
 
     def _convert_messages(self, messages: list[LLMMessage]) -> list[dict[str, Any]]:
         """Convert internal LLMMessage objects to OpenAI API dictionary format."""

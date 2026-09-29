@@ -10,6 +10,8 @@ policies:
     allowed_data_sources:
       - synthetic_order_database
       - synthetic_refund_gateway
+      - olist_ecommerce_dataset
+      - olist_refund_gateway
       - local_calculator_utility
     max_calls: 8
     business_rules:
@@ -19,17 +21,19 @@ policies:
       - "disallow_manual_credit_card_entry"
 
   research_summary:
-    description: "Research agent summarizing synthetic technical, regulatory, and market publications"
+    description: "Research agent summarizing corporate SEC EDGAR filings and technical publications"
     allowed_tools:
       - web_search
+      - sec_edgar_research
       - calculator
     allowed_data_sources:
       - public_web_stub
+      - sec_edgar_xbrl_api
       - local_calculator_utility
     max_calls: 10
     business_rules:
-      - "must_cite_synthetic_sources"
-      - "read_only_synthetic_search"
+      - "must_cite_sources"
+      - "read_only_search"
       - "no_confidential_data_exfiltration"
 
   customer_support:

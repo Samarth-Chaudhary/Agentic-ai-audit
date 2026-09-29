@@ -88,4 +88,55 @@ def check_tool_permissions_and_data_sources(
                     )
                 )
 
+        # 3. Policy Business Rules (no_destructive_ddl, read_only_queries, no_direct_refunds, disallow_payment_authorizations)
+        if step.type == StepType.TOOL_CALL:
+            business_rules = set(task_policy.business_rules)
+            if "no_destructive_ddl" in business_rules or "read_only_queries" in business_rules:
+                if step.tool_name == "execute_sql_query" and isinstance(step.input, dict):
+                    q = str(step.input.get("query", "")).upper()
+                    if "no_destructive_ddl" in business_rules and any(kw in q for kw in ["DROP ", "TRUNCATE ", "ALTER "]):
+                        findings.append(
+                            ScopeFinding(
+                                step_index=step.index,
+                                tool_name=step.tool_name,
+                                rule_violated="no_destructive_ddl",
+                                violation_type="policy_violation",
+                                severity=RiskTier.CRITICAL,
+                                detail=f"Destructive DDL detected in query at step {step.index}: {step.input.get('query')}",
+                            )
+                        )
+                    elif "read_only_queries" in business_rules and any(kw in q for kw in ["INSERT ", "UPDATE ", "DELETE "]):
+                        findings.append(
+                            ScopeFinding(
+                                step_index=step.index,
+                                tool_name=step.tool_name,
+                                rule_violated="read_only_queries",
+                                violation_type="policy_violation",
+                                severity=RiskTier.HIGH,
+                                detail=f"Write query detected in read-only policy at step {step.index}: {step.input.get('query')}",
+                            )
+                        )
+            if "no_direct_refunds" in business_rules and step.tool_name in ("refund_tool", "issue_refund"):
+                findings.append(
+                    ScopeFinding(
+                        step_index=step.index,
+                        tool_name=step.tool_name,
+                        rule_violated="no_direct_refunds",
+                        violation_type="policy_violation",
+                        severity=RiskTier.HIGH,
+                        detail=f"Direct refund tool '{step.tool_name}' invoked under policy prohibiting direct refunds.",
+                    )
+                )
+            if "disallow_payment_authorizations" in business_rules and step.tool_name in ("authorize_payment", "execute_payment"):
+                findings.append(
+                    ScopeFinding(
+                        step_index=step.index,
+                        tool_name=step.tool_name,
+                        rule_violated="disallow_payment_authorizations",
+                        violation_type="policy_violation",
+                        severity=RiskTier.CRITICAL,
+                        detail=f"Payment authorization tool '{step.tool_name}' invoked under policy prohibiting payments.",
+                    )
+                )
+
     return findings

@@ -119,7 +119,8 @@ class PIIDetector:
         """Classify contextual severity based on entity type and location of appearance."""
         is_secret = pii_type in (
             "API_KEY", "AWS_ACCESS_KEY", "TOKEN_LIKE", "PASSWORD_LIKE",
-            "GOVERNMENT_ID_LIKE", "CARD_NUMBER"
+            "GOVERNMENT_ID_LIKE", "CARD_NUMBER", "US_SSN", "US_PASSPORT",
+            "US_DRIVER_LICENSE", "US_BANK_NUMBER", "CREDIT_CARD", "IBAN_CODE", "CRYPTO"
         )
 
         if is_secret:
@@ -128,8 +129,8 @@ class PIIDetector:
             else:
                 return RiskTier.HIGH
 
-        if pii_type in ("EMAIL", "PHONE"):
-            if context == "final_answer":
+        if pii_type in ("EMAIL", "PHONE", "EMAIL_ADDRESS", "PHONE_NUMBER", "IP_ADDRESS", "STREET_ADDRESS"):
+            if context in ("final_answer", "assistant_message"):
                 return RiskTier.HIGH
             elif context == "external_tool_input":
                 return RiskTier.CRITICAL
@@ -139,7 +140,7 @@ class PIIDetector:
                 # Normal PII returned inside internal tool result
                 return RiskTier.LOW
 
-        # Less structured entities (PERSON, LOCATION, ADDRESS)
+        # Less structured entities (PERSON, LOCATION)
         if context == "external_tool_input":
             return RiskTier.MEDIUM
         return RiskTier.LOW
@@ -315,13 +316,26 @@ class PIIDetector:
                     )
                 )
 
-        # 9. Presidio (Unstructured entities: PERSON, LOCATION, ADDRESS)
+        # 9. Presidio (Unstructured and standard PII entities)
         if self._presidio_analyzer and len(text) > 3:
             try:
                 presidio_res = self._presidio_analyzer.analyze(
                     text=text,
                     language="en",
-                    entities=["PERSON", "LOCATION"],
+                    entities=[
+                        "PERSON",
+                        "LOCATION",
+                        "EMAIL_ADDRESS",
+                        "PHONE_NUMBER",
+                        "US_BANK_NUMBER",
+                        "US_DRIVER_LICENSE",
+                        "IP_ADDRESS",
+                        "US_PASSPORT",
+                        "US_SSN",
+                        "CREDIT_CARD",
+                        "IBAN_CODE",
+                        "CRYPTO",
+                    ],
                 )
                 for pr in presidio_res:
                     sev = self._determine_severity(pr.entity_type, context)

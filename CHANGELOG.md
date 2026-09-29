@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.0] - Phase 2: Real Agents on Real Data (2026-09-29)
+
+### Added
+- **Real Underlying Datasets & Tool Backing**:
+  - Implemented `OlistDataLoader` (`agent/data/olist_loader.py`) indexing 5,000 authentic orders, 5,196 payments, 5,603 order items, 3,859 products, and category translations from the Olist Brazilian E-Commerce dataset into a local SQLite store (`data/olist/olist.db`).
+  - Implemented `SecEdgarDataLoader` (`agent/data/edgar_loader.py`) querying live corporate 10-K and 10-Q XBRL financial facts from the U.S. SEC EDGAR public API with User-Agent compliance, gzip decompression, and local caching under `data/sec_edgar/`.
+  - Upgraded `order_lookup`, `refund_tool`, and added `sec_edgar_research` tools with strict provenance tracking (`data_source: "olist_ecommerce_dataset"` / `"sec_edgar_xbrl_api"`, `is_synthetic: false`).
+- **Real LLM Function-Calling Execution**:
+  - Executed 34 genuine agent execution traces spanning `customer_refund` and `research_summary` tasks using `llama3.2:3b` over a local Ollama server.
+  - Intercepted 100% of reasoning steps, tool calls, and tool outputs with natural variation in step counts (3 to 7 steps) and tool call sequences.
+  - Persisted all raw traces under `data/generated_traces/` with complete attempt logging in `data/generated_traces/run_log.json`.
+- **Hand-Labeled 54-Case Evaluation Benchmark**:
+  - Constructed 54 hand-labeled test cases across Scope, PII, and Groundedness (18 cases each: 12 true violations + 6 hard negatives).
+  - Built machine-readable label catalog in `data/evaluation_set/labels.json` and trace fixtures in `data/evaluation_set/traces/`.
+- **Per-Detector Empirical Evaluation & Naive Baseline Comparison**:
+  - Implemented `scripts/evaluate_detectors.py` supporting production engines and naive baselines (Allowlist for Scope, Plain Presidio for PII, Keyword Fallback for Groundedness).
+  - Measured and published exact precision, recall, and F1 per detector with full false positive and false negative audit.
+- **Risk-Score Weight Calibration & Sensitivity Analysis**:
+  - Implemented `scripts/calibrate_risk_weights.py` evaluating production weights (0.35, 0.35, 0.30) against 4 alternative schemes.
+  - Conducted sensitivity analysis with $\pm 10\%$ perturbations confirming risk tier assignment stability.
+
+---
+
 ## [0.1.0] - Phase 1: Trust & Integrity (2026-09-29)
 
 ### Fixed

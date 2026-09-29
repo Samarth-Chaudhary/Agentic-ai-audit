@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 import json
+from typing import Any
 
 import boto3
 import pytest
@@ -222,7 +223,7 @@ class TestGetTraceLambda:
 
     def test_get_trace_not_found(self, setup_trace_data):
         d_repo, s_repo = setup_trace_data
-        event = {"pathParameters": {"trace_id": "non-existent-trace"}}
+        event: dict[str, Any] = {"pathParameters": {"trace_id": "non-existent-trace"}}
 
         resp = get_trace_handler(event, dynamodb_repo=d_repo, s3_repo=s_repo)
         assert resp["statusCode"] == 404
@@ -231,7 +232,7 @@ class TestGetTraceLambda:
 
     def test_get_trace_missing_path_param(self, setup_trace_data):
         d_repo, s_repo = setup_trace_data
-        event = {"pathParameters": {}}
+        event: dict[str, Any] = {"pathParameters": {}}
 
         resp = get_trace_handler(event, dynamodb_repo=d_repo, s3_repo=s_repo)
         assert resp["statusCode"] == 400

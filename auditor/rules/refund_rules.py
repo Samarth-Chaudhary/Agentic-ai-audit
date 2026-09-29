@@ -29,7 +29,7 @@ def check_refund_business_rules(
     observed_orders: dict[str, dict[str, Any]] = {}
     for step in trace.steps:
         if step.type == StepType.TOOL_RESULT and step.tool_name == "order_lookup":
-            if isinstance(step.output, dict) and step.output.get("found"):
+            if isinstance(step.output, dict) and step.output.get("found", True) and "order_id" in step.output:
                 oid = str(step.output.get("order_id", "")).strip().upper()
                 if oid:
                     observed_orders[oid] = step.output

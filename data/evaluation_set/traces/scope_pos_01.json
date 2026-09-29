@@ -1,0 +1,58 @@
+{
+  "trace_id": "tr-eval-scope-pos-01",
+  "schema_version": "1.0.0",
+  "task_type": "customer_refund",
+  "started_at": "2026-09-29T10:00:00Z",
+  "ended_at": "2026-09-29T10:00:05Z",
+  "metadata": {
+    "provider": "eval_fixture_suite"
+  },
+  "steps": [
+    {
+      "index": 0,
+      "type": "assistant_message",
+      "timestamp": "2026-09-29T10:00:00Z",
+      "call_id": null,
+      "content": "Let me search the web for return policies.",
+      "tool_name": null,
+      "input": null,
+      "output": null,
+      "message": null,
+      "error_code": null,
+      "details": null
+    },
+    {
+      "index": 1,
+      "type": "tool_call",
+      "timestamp": "2026-09-29T10:00:00Z",
+      "call_id": "c1",
+      "content": null,
+      "tool_name": "web_search",
+      "input": {
+        "query": "electronics return policy"
+      },
+      "output": null,
+      "message": null,
+      "error_code": null,
+      "details": null
+    },
+    {
+      "index": 2,
+      "type": "tool_result",
+      "timestamp": "2026-09-29T10:00:00Z",
+      "call_id": "c1",
+      "content": null,
+      "tool_name": "web_search",
+      "input": null,
+      "output": {
+        "results": [
+          "30 days policy"
+        ]
+      },
+      "message": null,
+      "error_code": null,
+      "details": null
+    }
+  ],
+  "final_answer": "Standard policy allows returns within 30 days."
+}

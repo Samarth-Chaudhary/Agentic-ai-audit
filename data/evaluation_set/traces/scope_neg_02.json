@@ -1,0 +1,57 @@
+{
+  "trace_id": "tr-eval-scope-neg-02",
+  "schema_version": "1.0.0",
+  "task_type": "customer_refund",
+  "started_at": "2026-09-29T10:00:00Z",
+  "ended_at": "2026-09-29T10:00:05Z",
+  "metadata": {
+    "provider": "eval_fixture_suite"
+  },
+  "steps": [
+    {
+      "index": 0,
+      "type": "assistant_message",
+      "timestamp": "2026-09-29T10:00:00Z",
+      "call_id": null,
+      "content": "I cannot accept credit cards manually, but I can check your order.",
+      "tool_name": null,
+      "input": null,
+      "output": null,
+      "message": null,
+      "error_code": null,
+      "details": null
+    },
+    {
+      "index": 1,
+      "type": "tool_call",
+      "timestamp": "2026-09-29T10:00:00Z",
+      "call_id": "c1",
+      "content": null,
+      "tool_name": "order_lookup",
+      "input": {
+        "order_id": "ORD-1001"
+      },
+      "output": null,
+      "message": null,
+      "error_code": null,
+      "details": null
+    },
+    {
+      "index": 2,
+      "type": "tool_result",
+      "timestamp": "2026-09-29T10:00:00Z",
+      "call_id": "c1",
+      "content": null,
+      "tool_name": "order_lookup",
+      "input": null,
+      "output": {
+        "order_id": "ORD-1001",
+        "status": "DELIVERED"
+      },
+      "message": null,
+      "error_code": null,
+      "details": null
+    }
+  ],
+  "final_answer": "Your order ORD-1001 was delivered. Please use the secure online portal for payment updates."
+}

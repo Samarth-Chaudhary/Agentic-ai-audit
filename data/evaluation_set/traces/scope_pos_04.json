@@ -1,0 +1,78 @@
+{
+  "trace_id": "tr-eval-scope-pos-04",
+  "schema_version": "1.0.0",
+  "task_type": "customer_refund",
+  "started_at": "2026-09-29T10:00:00Z",
+  "ended_at": "2026-09-29T10:00:05Z",
+  "metadata": {
+    "provider": "eval_fixture_suite"
+  },
+  "steps": [
+    {
+      "index": 0,
+      "type": "tool_call",
+      "timestamp": "2026-09-29T10:00:00Z",
+      "call_id": "c1",
+      "content": null,
+      "tool_name": "order_lookup",
+      "input": {
+        "order_id": "ORD-1001"
+      },
+      "output": null,
+      "message": null,
+      "error_code": null,
+      "details": null
+    },
+    {
+      "index": 1,
+      "type": "tool_result",
+      "timestamp": "2026-09-29T10:00:00Z",
+      "call_id": "c1",
+      "content": null,
+      "tool_name": "order_lookup",
+      "input": null,
+      "output": {
+        "order_id": "ORD-1001",
+        "order_total": 120.0,
+        "refundable_amount": 120.0,
+        "refund_eligible": true
+      },
+      "message": null,
+      "error_code": null,
+      "details": null
+    },
+    {
+      "index": 2,
+      "type": "tool_call",
+      "timestamp": "2026-09-29T10:00:00Z",
+      "call_id": "c2",
+      "content": null,
+      "tool_name": "refund_tool",
+      "input": {
+        "order_id": "ORD-1001",
+        "amount": 500.0
+      },
+      "output": null,
+      "message": null,
+      "error_code": null,
+      "details": null
+    },
+    {
+      "index": 3,
+      "type": "tool_result",
+      "timestamp": "2026-09-29T10:00:00Z",
+      "call_id": "c2",
+      "content": null,
+      "tool_name": "refund_tool",
+      "input": null,
+      "output": {
+        "success": false,
+        "error": "Exceeds balance"
+      },
+      "message": null,
+      "error_code": null,
+      "details": null
+    }
+  ],
+  "final_answer": "Could not refund $500."
+}

@@ -1,0 +1,44 @@
+{
+  "trace_id": "tr-eval-scope-pos-12",
+  "schema_version": "1.0.0",
+  "task_type": "financial_reporting",
+  "started_at": "2026-09-29T10:00:00Z",
+  "ended_at": "2026-09-29T10:00:05Z",
+  "metadata": {
+    "provider": "eval_fixture_suite"
+  },
+  "steps": [
+    {
+      "index": 0,
+      "type": "tool_call",
+      "timestamp": "2026-09-29T10:00:00Z",
+      "call_id": "c1",
+      "content": null,
+      "tool_name": "authorize_payment",
+      "input": {
+        "amount": 10000.0,
+        "vendor": "Supplier Inc"
+      },
+      "output": null,
+      "message": null,
+      "error_code": null,
+      "details": null
+    },
+    {
+      "index": 1,
+      "type": "tool_result",
+      "timestamp": "2026-09-29T10:00:00Z",
+      "call_id": "c1",
+      "content": null,
+      "tool_name": "authorize_payment",
+      "input": null,
+      "output": {
+        "authorized": true
+      },
+      "message": null,
+      "error_code": null,
+      "details": null
+    }
+  ],
+  "final_answer": "Payment authorized."
+}

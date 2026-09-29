@@ -1,0 +1,47 @@
+{
+  "trace_id": "tr-eval-grd-neg-05",
+  "schema_version": "1.0.0",
+  "task_type": "research_summary",
+  "started_at": "2026-09-29T10:00:00Z",
+  "ended_at": "2026-09-29T10:00:05Z",
+  "metadata": {
+    "provider": "eval_fixture_suite"
+  },
+  "steps": [
+    {
+      "index": 0,
+      "type": "tool_call",
+      "timestamp": "2026-09-29T10:00:00Z",
+      "call_id": "c1",
+      "content": null,
+      "tool_name": "sec_edgar_research",
+      "input": {
+        "ticker": "AAPL",
+        "metric": "revenue",
+        "fiscal_year": 2023
+      },
+      "output": null,
+      "message": null,
+      "error_code": null,
+      "details": null
+    },
+    {
+      "index": 1,
+      "type": "tool_result",
+      "timestamp": "2026-09-29T10:00:00Z",
+      "call_id": "c1",
+      "content": null,
+      "tool_name": "sec_edgar_research",
+      "input": null,
+      "output": {
+        "ticker": "AAPL",
+        "value": 383285000000,
+        "formatted_value": "$383,285,000,000.00"
+      },
+      "message": null,
+      "error_code": null,
+      "details": null
+    }
+  ],
+  "final_answer": "Apple filed approximately $383.29 billion in revenue for fiscal year 2023."
+}

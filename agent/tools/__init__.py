@@ -9,16 +9,18 @@ from agent.tools.base import (
 from agent.tools.calculator import CalculatorTool
 from agent.tools.order_lookup import OrderLookupTool
 from agent.tools.refund_tool import RefundTool
+from agent.tools.sec_edgar import SecEdgarTool
 from agent.tools.web_search import WebSearchTool
 
 
 def get_default_tools() -> dict[str, BaseTool]:
     """Instantiate and return standard tools keyed by tool name."""
-    tools = [
+    tools: list[BaseTool] = [
         OrderLookupTool(),
         RefundTool(),
         WebSearchTool(),
         CalculatorTool(),
+        SecEdgarTool(),
     ]
     return {t.name: t for t in tools}
 
@@ -34,6 +36,7 @@ __all__ = [
     "CalculatorTool",
     "OrderLookupTool",
     "RefundTool",
+    "SecEdgarTool",
     "ToolError",
     "ToolExecutionError",
     "ToolInputValidationError",

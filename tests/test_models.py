@@ -101,8 +101,10 @@ def test_findings_models_serialization():
     scope = ScopeFinding(
         finding_id="sc-01",
         tool_name="unauthorized_bash",
+        rule_violated="unauthorized_tool",
         violation_type="unauthorized_tool",
         severity=RiskTier.HIGH,
+        detail="Attempted to call disallowed tool.",
         details="Attempted to call disallowed tool.",
         step_index=2,
     )
@@ -113,9 +115,12 @@ def test_findings_models_serialization():
     pii = PIIFinding(
         finding_id="pii-01",
         entity_type="EMAIL_ADDRESS",
+        pii_type="EMAIL_ADDRESS",
         confidence_score=0.95,
         step_index=1,
+        field_path="input",
         field_name="input",
+        redacted_snippet="customer email: [REDACTED]",
         snippet_redacted="customer email: [REDACTED]",
         severity=RiskTier.MEDIUM,
     )
@@ -123,9 +128,12 @@ def test_findings_models_serialization():
 
     ground = GroundednessFinding(
         finding_id="gnd-01",
+        claim="Order has arrived.",
         statement="Order has arrived.",
         is_grounded=False,
+        similarity=0.25,
         similarity_score=0.25,
+        evidence_snippet="Tool output stated order is still pending.",
         evidence_context="Tool output stated order is still pending.",
         severity=RiskTier.HIGH,
     )

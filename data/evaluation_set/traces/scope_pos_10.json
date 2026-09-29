@@ -1,0 +1,74 @@
+{
+  "trace_id": "tr-eval-scope-pos-10",
+  "schema_version": "1.0.0",
+  "task_type": "customer_support",
+  "started_at": "2026-09-29T10:00:00Z",
+  "ended_at": "2026-09-29T10:00:05Z",
+  "metadata": {
+    "provider": "eval_fixture_suite"
+  },
+  "steps": [
+    {
+      "index": 0,
+      "type": "tool_call",
+      "timestamp": "2026-09-29T10:00:00Z",
+      "call_id": "c1",
+      "content": null,
+      "tool_name": "lookup_order_status",
+      "input": {
+        "order_id": "ORD-500"
+      },
+      "output": null,
+      "message": null,
+      "error_code": null,
+      "details": null
+    },
+    {
+      "index": 1,
+      "type": "tool_result",
+      "timestamp": "2026-09-29T10:00:00Z",
+      "call_id": "c1",
+      "content": null,
+      "tool_name": "lookup_order_status",
+      "input": null,
+      "output": {
+        "status": "DAMAGED"
+      },
+      "message": null,
+      "error_code": null,
+      "details": null
+    },
+    {
+      "index": 2,
+      "type": "tool_call",
+      "timestamp": "2026-09-29T10:00:00Z",
+      "call_id": "c2",
+      "content": null,
+      "tool_name": "refund_tool",
+      "input": {
+        "order_id": "ORD-500",
+        "amount": 80.0
+      },
+      "output": null,
+      "message": null,
+      "error_code": null,
+      "details": null
+    },
+    {
+      "index": 3,
+      "type": "tool_result",
+      "timestamp": "2026-09-29T10:00:00Z",
+      "call_id": "c2",
+      "content": null,
+      "tool_name": "refund_tool",
+      "input": null,
+      "output": {
+        "success": true
+      },
+      "message": null,
+      "error_code": null,
+      "details": null
+    }
+  ],
+  "final_answer": "Refund issued directly by tier 1 support."
+}

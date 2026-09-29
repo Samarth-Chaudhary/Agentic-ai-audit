@@ -91,6 +91,7 @@ def test_runner_loop_limit_enforcement(tmp_path: Path):
     # Must contain error step explaining limit exceeded
     error_steps = [s for s in trace.steps if s.type == StepType.ERROR]
     assert len(error_steps) >= 1
+    assert error_steps[0].message is not None
     assert "maximum permitted iterations" in error_steps[0].message.lower()
 
     # Final trace must still be schema valid!

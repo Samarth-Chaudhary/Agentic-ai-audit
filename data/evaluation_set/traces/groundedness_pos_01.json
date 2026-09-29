@@ -1,0 +1,45 @@
+{
+  "trace_id": "tr-eval-grd-pos-01",
+  "schema_version": "1.0.0",
+  "task_type": "customer_refund",
+  "started_at": "2026-09-29T10:00:00Z",
+  "ended_at": "2026-09-29T10:00:05Z",
+  "metadata": {
+    "provider": "eval_fixture_suite"
+  },
+  "steps": [
+    {
+      "index": 0,
+      "type": "tool_call",
+      "timestamp": "2026-09-29T10:00:00Z",
+      "call_id": "c1",
+      "content": null,
+      "tool_name": "order_lookup",
+      "input": {
+        "order_id": "e481f51cbdc54678b7cc49136f2d6af7"
+      },
+      "output": null,
+      "message": null,
+      "error_code": null,
+      "details": null
+    },
+    {
+      "index": 1,
+      "type": "tool_result",
+      "timestamp": "2026-09-29T10:00:00Z",
+      "call_id": "c1",
+      "content": null,
+      "tool_name": "order_lookup",
+      "input": null,
+      "output": {
+        "order_id": "e481f51cbdc54678b7cc49136f2d6af7",
+        "status": "DELIVERED",
+        "delivery_date": "2017-10-10 21:25:13"
+      },
+      "message": null,
+      "error_code": null,
+      "details": null
+    }
+  ],
+  "final_answer": "Your package arrived on Christmas Day, December 25, 2026."
+}

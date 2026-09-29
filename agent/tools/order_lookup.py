@@ -1,16 +1,18 @@
-"""Deterministic fake order lookup tool for AI Agent Governance.
+"""Order lookup tool backed by the real Olist Brazilian E-Commerce dataset and demo fixtures.
 
-BACKEND NOTICE: This is intentionally a synthetic toy/stub data source for testing
-and governance demonstration. It does NOT connect to real customer or production databases.
+Supports authentic order queries across thousands of real Olist records (status, amounts, product
+categories translated to English, timestamps) as well as legacy synthetic demo fixtures.
+All responses explicitly label data provenance (is_synthetic and data_source) with zero mixing.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
+from agent.data.olist_loader import OlistDataLoader
 from agent.tools.base import BaseTool, ToolExecutionError
 
-# Synthetic demo order store
+# Synthetic demo order store for backward-compatible fixtures
 SYNTHETIC_ORDERS: dict[str, dict[str, Any]] = {
     "ORD-1001": {
         "order_id": "ORD-1001",
@@ -23,9 +25,10 @@ SYNTHETIC_ORDERS: dict[str, dict[str, Any]] = {
         "already_refunded": False,
         "refundable_amount": 120.00,
         "items": [
-            {"sku": "SKU-A1", "name": "Ergonomic Office Chair", "price": 120.00, "qty": 1}
+            {"sku": "SKU-A1", "name": "Ergonomic Office Chair", "price": 120.00, "qty": 1, "category": "office_furniture"}
         ],
         "delivery_date": "2026-09-20",
+        "is_synthetic": True,
     },
     "ORD-1002": {
         "order_id": "ORD-1002",
@@ -38,9 +41,10 @@ SYNTHETIC_ORDERS: dict[str, dict[str, Any]] = {
         "already_refunded": False,
         "refundable_amount": 0.00,
         "items": [
-            {"sku": "SKU-B2", "name": "Wireless Mechanical Keyboard", "price": 45.50, "qty": 1}
+            {"sku": "SKU-B2", "name": "Wireless Mechanical Keyboard", "price": 45.50, "qty": 1, "category": "computers"}
         ],
         "notes": "Item in transit. Refunds only permitted after physical delivery.",
+        "is_synthetic": True,
     },
     "ORD-1003": {
         "order_id": "ORD-1003",
@@ -53,9 +57,10 @@ SYNTHETIC_ORDERS: dict[str, dict[str, Any]] = {
         "already_refunded": True,
         "refundable_amount": 0.00,
         "items": [
-            {"sku": "SKU-C3", "name": "Noise Cancelling Headphones", "price": 300.00, "qty": 1}
+            {"sku": "SKU-C3", "name": "Noise Cancelling Headphones", "price": 300.00, "qty": 1, "category": "audio"}
         ],
         "notes": "Full refund previously issued on 2026-09-22.",
+        "is_synthetic": True,
     },
     "ORD-1004": {
         "order_id": "ORD-1004",
@@ -68,15 +73,19 @@ SYNTHETIC_ORDERS: dict[str, dict[str, Any]] = {
         "already_refunded": False,
         "refundable_amount": 89.99,
         "items": [
-            {"sku": "SKU-D4", "name": "Smart Fitness Band", "price": 89.99, "qty": 1}
+            {"sku": "SKU-D4", "name": "Smart Fitness Band", "price": 89.99, "qty": 1, "category": "wearables"}
         ],
         "delivery_date": "2026-09-24",
+        "is_synthetic": True,
     },
 }
 
 
 class OrderLookupTool(BaseTool):
-    """Tool for querying synthetic customer order records."""
+    """Tool for querying customer orders backed by the real Olist dataset and test fixtures."""
+
+    def __init__(self, olist_loader: OlistDataLoader | None = None) -> None:
+        self.olist_loader = olist_loader or OlistDataLoader()
 
     @property
     def name(self) -> str:
@@ -85,13 +94,13 @@ class OrderLookupTool(BaseTool):
     @property
     def description(self) -> str:
         return (
-            "Look up customer order details from the synthetic order database. "
-            "Returns status, customer email, order total, refund eligibility, and refundable amount."
+            "Look up customer order details from the authentic Olist e-commerce database "
+            "or test fixtures. Returns status, items, amounts, refund eligibility, and delivery dates."
         )
 
     @property
     def data_source(self) -> str:
-        return "synthetic_order_database"
+        return "olist_ecommerce_dataset"
 
     @property
     def parameters_schema(self) -> dict[str, Any]:
@@ -102,29 +111,42 @@ class OrderLookupTool(BaseTool):
                 "order_id": {
                     "type": "string",
                     "minLength": 1,
-                    "description": "Unique identifier of the order (e.g. 'ORD-1001').",
+                    "description": "Unique identifier of the order (e.g. real Olist ID 'e481f51cbdc54678b7cc49136f2d6af7' or 'ORD-1001').",
                 }
             },
             "additionalProperties": False,
         }
 
     def execute(self, order_id: str, **kwargs: Any) -> dict[str, Any]:
-        """Look up order by ID from deterministic synthetic dataset."""
-        order_key = str(order_id).strip().upper()
-        if not order_key:
+        """Look up order by ID from real Olist dataset or synthetic fixture store."""
+        raw_key = str(order_id).strip()
+        if not raw_key:
             raise ToolExecutionError("order_id must be a non-empty string.")
 
-        if order_key in SYNTHETIC_ORDERS:
-            order_data = dict(SYNTHETIC_ORDERS[order_key])
+        # Check synthetic fixtures first (case-insensitive for ORD-xxxx)
+        upper_key = raw_key.upper()
+        if upper_key in SYNTHETIC_ORDERS:
+            order_data = dict(SYNTHETIC_ORDERS[upper_key])
             order_data["found"] = True
-            order_data["data_source"] = self.data_source
+            order_data["data_source"] = "synthetic_order_database"
             order_data["backend"] = "synthetic_order_database_stub"
+            order_data["is_synthetic"] = True
             return order_data
+
+        # Check authentic Olist dataset
+        lower_key = raw_key.lower()
+        olist_order = self.olist_loader.get_order(lower_key)
+        if olist_order is not None:
+            res = dict(olist_order)
+            res["found"] = True
+            res["backend"] = "olist_sqlite_store"
+            return res
 
         return {
             "found": False,
-            "order_id": order_key,
+            "order_id": raw_key,
             "data_source": self.data_source,
-            "error": f"Order '{order_key}' was not found in synthetic database.",
-            "backend": "synthetic_order_database_stub",
+            "error": f"Order '{raw_key}' was not found in Olist dataset or synthetic fixtures.",
+            "backend": "olist_sqlite_store",
+            "is_synthetic": False,
         }
