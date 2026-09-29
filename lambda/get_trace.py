@@ -176,6 +176,10 @@ def handler(
             "task_type": audit_record.get("task_type"),
             "processed_at": audit_record.get("processed_at"),
             "summary": audit_record.get("summary", ""),
+            "status": audit_record.get("status", "COMPLETED"),
+            "is_degraded": audit_record.get("is_degraded", False),
+            "degraded_reasons": audit_record.get("degraded_reasons", []),
+            "engine_info": audit_record.get("engine_info"),
             "risk": {
                 "risk_score": float(audit_record.get("risk_score", 0.0)),
                 "risk_tier": audit_record.get("risk_tier", "LOW"),

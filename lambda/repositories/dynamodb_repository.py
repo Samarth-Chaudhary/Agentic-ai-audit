@@ -122,6 +122,13 @@ class DynamoDBRepository:
             "status": audit_result.get("status", "COMPLETED"),
         }
 
+        if "engine_info" in audit_result:
+            item["engine_info"] = audit_result["engine_info"]
+        if "is_degraded" in audit_result:
+            item["is_degraded"] = audit_result["is_degraded"]
+        if "degraded_reasons" in audit_result:
+            item["degraded_reasons"] = audit_result["degraded_reasons"]
+
         if audit_result.get("risk_result"):
             item["risk_result"] = audit_result["risk_result"]
 
@@ -173,7 +180,7 @@ class DynamoDBRepository:
         limit = min(max(1, limit), 100)
         scan_kwargs: dict[str, Any] = {
             "Limit": limit,
-            "ProjectionExpression": "trace_id, task_type, risk_score, risk_tier, processed_at, counts, summary",
+            "ProjectionExpression": "trace_id, task_type, risk_score, risk_tier, processed_at, counts, summary, is_degraded, engine_info",
         }
         if last_evaluated_key:
             scan_kwargs["ExclusiveStartKey"] = _convert_floats_to_decimals(last_evaluated_key)

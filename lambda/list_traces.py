@@ -88,6 +88,8 @@ def handler(
                 "risk_score": float(item.get("risk_score", 0.0)),
                 "risk_tier": item.get("risk_tier", "LOW"),
                 "processed_at": item.get("processed_at"),
+                "is_degraded": bool(item.get("is_degraded", False)),
+                "engine_info": item.get("engine_info"),
                 "pii_count": int(counts.get("pii_entities_detected", 0)),
                 "scope_violation_count": int(counts.get("scope_violations", 0)),
                 "groundedness_failure_count": int(counts.get("unsupported_claims", 0)),
