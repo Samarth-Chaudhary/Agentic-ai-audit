@@ -8,12 +8,13 @@ from __future__ import annotations
 
 import ast
 import operator
+from collections.abc import Callable
 from typing import Any
 
 from agent.tools.base import BaseTool
 
 # Supported binary arithmetic operators
-SAFE_OPERATORS = {
+SAFE_OPERATORS: dict[type[ast.operator], Callable[[Any, Any], Any]] = {
     ast.Add: operator.add,
     ast.Sub: operator.sub,
     ast.Mult: operator.mul,
@@ -24,7 +25,7 @@ SAFE_OPERATORS = {
 }
 
 # Supported unary operators
-SAFE_UNARY_OPERATORS = {
+SAFE_UNARY_OPERATORS: dict[type[ast.unaryop], Callable[[Any], Any]] = {
     ast.UAdd: operator.pos,
     ast.USub: operator.neg,
 }

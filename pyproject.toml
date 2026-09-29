@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "agentic-ai-audit"
 version = "0.1.0"
-description = "AI Agent Governance & Audit Trail Analyzer"
+description = "AI Agent Governance & Audit Trail Analyzer - Deterministic multi-control post-hoc audit pipeline with operational AWS serverless integration and reviewer dashboard"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}

@@ -72,7 +72,7 @@ class BaseTool(ABC):
         }
 
     @abstractmethod
-    def execute(self, **kwargs: Any) -> Any:
+    def execute(self, *args: Any, **kwargs: Any) -> Any:
         """Execute the tool logic and return structured output."""
 
     def __call__(self, **kwargs: Any) -> Any:

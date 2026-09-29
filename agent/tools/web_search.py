@@ -13,7 +13,7 @@ from typing import Any
 from agent.tools.base import BaseTool
 
 # Local synthetic corpus
-SYNTHETIC_WEB_CORPUS: list[dict[str, str]] = [
+SYNTHETIC_WEB_CORPUS: list[dict[str, Any]] = [
     {
         "id": "doc-01",
         "title": "Autonomous AI Agent Governance & Observability Best Practices",

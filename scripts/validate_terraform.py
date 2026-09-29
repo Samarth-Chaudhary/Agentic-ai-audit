@@ -79,8 +79,11 @@ def check_balanced_braces(content: str) -> bool:
     return len(stack) == 0 and not in_string
 
 
-def validate_terraform_dir(tf_dir: Path) -> dict:
-    results = {"directory": str(tf_dir), "missing_files": [], "invalid_files": [], "found_resources": [], "missing_resources": []}
+from typing import Any
+
+
+def validate_terraform_dir(tf_dir: Path) -> dict[str, Any]:
+    results: dict[str, Any] = {"directory": str(tf_dir), "missing_files": [], "invalid_files": [], "found_resources": [], "missing_resources": []}
 
     all_content = ""
 
