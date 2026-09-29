@@ -1,0 +1,394 @@
+"""AI Agent Governance & Audit Trail Analyzer - Reviewer Dashboard.
+
+Two Major Tabs:
+- TAB 1: Audit Explorer (Operational Trace Inspection via API Gateway / DynamoDB / S3)
+- TAB 2: Risk Analytics (Aggregate Analytics via Athena & SQL Queries)
+"""
+
+from __future__ import annotations
+
+import os
+import sys
+from pathlib import Path
+
+# Ensure project root is in sys.path when launched via Streamlit CLI
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+import pandas as pd
+import streamlit as st
+
+try:
+    from dashboard.api_client import AuditApiClient
+    from dashboard.athena_client import DashboardAthenaService
+    from dashboard.charts import (
+        chart_avg_risk_by_task,
+        chart_daily_risk_trend,
+        chart_risk_distribution,
+        chart_tool_violations,
+    )
+    from dashboard.components import (
+        render_evidence_panel,
+        render_header,
+        render_kpi_metrics,
+        render_risk_badge,
+        render_trace_timeline,
+    )
+except ImportError:
+    from api_client import AuditApiClient
+    from athena_client import DashboardAthenaService
+    from charts import (
+        chart_avg_risk_by_task,
+        chart_daily_risk_trend,
+        chart_risk_distribution,
+        chart_tool_violations,
+    )
+    from components import (
+        render_evidence_panel,
+        render_header,
+        render_kpi_metrics,
+        render_risk_badge,
+        render_trace_timeline,
+    )
+
+
+# Page configuration
+st.set_page_config(
+    page_title="AI Agent Governance & Audit Analyzer",
+    page_icon="🛡️",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+
+def main() -> None:
+    # -------------------------------------------------------------------------
+    # Sidebar: Mode Selection & Filters
+    # -------------------------------------------------------------------------
+    st.sidebar.title("⚙️ Dashboard Controls")
+
+    # Mode Selector
+    default_demo = os.environ.get("DEMO_MODE", "true").lower() in ("true", "1", "yes")
+    data_mode = st.sidebar.radio(
+        "Data Source Environment:",
+        options=["Demo / Local Data", "Live AWS Pipeline"],
+        index=0 if default_demo else 1,
+        help="Switch between local demonstration fixtures and live AWS API Gateway/Athena connection.",
+    )
+    is_demo_mode = data_mode == "Demo / Local Data"
+
+    # API Base URL configuration if in Live mode
+    api_url = os.environ.get("API_GATEWAY_URL", "")
+    if not is_demo_mode:
+        api_url = st.sidebar.text_input(
+            "API Gateway URL:",
+            value=api_url,
+            placeholder="https://<api-id>.execute-api.<region>.amazonaws.com/dev",
+        )
+
+    st.sidebar.divider()
+    st.sidebar.subheader("Filter Traces")
+
+    selected_task_type = st.sidebar.selectbox(
+        "Task Type:",
+        options=["All Tasks", "customer_support", "financial_reporting", "financial_analysis"],
+        index=0,
+    )
+    task_filter = None if selected_task_type == "All Tasks" else selected_task_type
+
+    selected_risk_tier = st.sidebar.selectbox(
+        "Risk Tier:",
+        options=["All Tiers", "LOW", "MEDIUM", "HIGH", "CRITICAL"],
+        index=0,
+    )
+    tier_filter = None if selected_risk_tier == "All Tiers" else selected_risk_tier
+
+    selected_date = st.sidebar.selectbox(
+        "Date:",
+        options=["All Dates", "2026-09-27", "2026-09-26", "2026-09-25", "2026-09-24", "2026-09-23"],
+        index=0,
+        help="Filter traces by audit timestamp date.",
+    )
+    date_filter = None if selected_date == "All Dates" else selected_date
+
+    st.sidebar.divider()
+    st.sidebar.markdown(
+        "### 🏛️ Governance Standards\n"
+        "- **Scope Control:** Tool authorization & limits\n"
+        "- **PII Control:** Presidio / Regex redaction\n"
+        "- **Groundedness Control:** NLI factual entailment\n"
+        "- **Risk Engine:** Composite weighted scoring\n"
+    )
+
+    # Initialize Services
+    api_client = AuditApiClient(base_url=api_url, demo_mode=is_demo_mode)
+    athena_service = DashboardAthenaService(demo_mode=is_demo_mode)
+
+    # -------------------------------------------------------------------------
+    # Main Header & High-Level KPIs
+    # -------------------------------------------------------------------------
+    render_header(demo_mode=is_demo_mode)
+
+    try:
+        metrics = api_client.get_summary_metrics()
+    except Exception as exc:
+        st.error(f"Could not load summary metrics: {exc}")
+        metrics = {}
+
+    render_kpi_metrics(metrics)
+    st.write("")
+
+    # -------------------------------------------------------------------------
+    # Two Major Dashboard Tabs
+    # -------------------------------------------------------------------------
+    tab_explorer, tab_analytics = st.tabs([
+        "🔍 TAB 1: Audit Explorer",
+        "📊 TAB 2: Risk Analytics",
+    ])
+
+    # =========================================================================
+    # TAB 1: AUDIT EXPLORER (Operational Inspection)
+    # =========================================================================
+    with tab_explorer:
+        st.subheader("📋 Operational Trace Browser")
+        st.caption("Browse audited agent execution traces. Drill down to inspect steps, inline violations, and technical evidence.")
+
+        try:
+            traces_list = api_client.list_traces(
+                task_type=task_filter,
+                risk_tier=tier_filter,
+                date_filter=date_filter,
+                limit=100,
+            )
+        except ConnectionError as exc:
+            st.error(f"⚠️ **API Gateway Unavailable**: {exc}. Please verify connectivity or switch to Demo Mode in sidebar.")
+            traces_list = []
+        except Exception as exc:
+            st.error(f"⚠️ **Failed to retrieve traces from API Gateway**: {exc}")
+            traces_list = []
+
+        if not traces_list:
+            st.info("No traces matched the selected filter criteria.")
+        else:
+            # 1. Trace Table with exact columns per Part 9 specification
+            df_table = pd.DataFrame([
+                {
+                    "Trace ID": t["trace_id"],
+                    "Task Type": t["task_type"],
+                    "Date/Time": t.get("processed_at", ""),
+                    "Risk Score": f"{float(t['risk_score']):.1f}",
+                    "Risk Tier": t["risk_tier"],
+                    "Scope Issues": t.get("scope_violation_count", t.get("scope_violations", 0)),
+                    "PII Issues": t.get("pii_count", t.get("pii_findings", 0)),
+                    "Groundedness Issues": t.get("groundedness_failure_count", t.get("groundedness_failures", 0)),
+                }
+                for t in traces_list
+            ])
+
+            st.dataframe(
+                df_table,
+                use_container_width=True,
+                hide_index=True,
+            )
+
+            st.divider()
+
+            # 2. Trace Detail Selector
+            trace_ids = [t["trace_id"] for t in traces_list]
+            selected_trace_id = st.selectbox(
+                "Select a Trace for In-Depth Audit Inspection:",
+                options=trace_ids,
+                index=0,
+            )
+
+            if selected_trace_id:
+                try:
+                    trace_detail = api_client.get_trace(selected_trace_id)
+                except KeyError:
+                    st.error(f"🔍 **Trace Not Found**: Trace '{selected_trace_id}' was not found.")
+                    trace_detail = None
+                except ConnectionError as exc:
+                    st.error(f"⚠️ **API Connection Error**: {exc}")
+                    trace_detail = None
+                except Exception as exc:
+                    st.error(f"⚠️ **Error Fetching Trace Details**: {exc}")
+                    trace_detail = None
+
+                if trace_detail:
+                    score = float(trace_detail.get("risk_score") if trace_detail.get("risk_score") is not None else trace_detail.get("risk", {}).get("risk_score", 0.0))
+                    tier = str(trace_detail.get("risk_tier") or trace_detail.get("risk", {}).get("risk_tier", "LOW"))
+                    processed_at = trace_detail.get("processed_at", "N/A")
+                    summary = trace_detail.get("summary", "No summary generated.")
+
+                    with st.container(border=True):
+                        col_a, col_b = st.columns([3, 1])
+                        with col_a:
+                            st.markdown(f"### Trace `{trace_detail.get('trace_id')}`")
+                            st.write(f"**Task Classification:** `{trace_detail.get('task_type')}` | **Date/Time:** `{processed_at}`")
+                            st.info(f"**Audit Summary:** {summary}")
+                        with col_b:
+                            st.markdown(f"**Risk Evaluation:**\n\n{render_risk_badge(tier, score)}", unsafe_allow_html=True)
+                            st.caption(f"Score: {score:.1f} / 100.0")
+
+                    # 3. Reviewer UX Goal: WHAT, WHERE, WHY, EVIDENCE
+                    findings = trace_detail.get("findings", {})
+                    scope_count = len(findings.get("scope", []))
+                    pii_count = len(findings.get("pii", []))
+                    ground_count = len(findings.get("groundedness", []))
+
+                    where_steps = []
+                    for f in findings.get("scope", []):
+                        where_steps.append(f"Step {f.get('step_index', '?')} (Scope)")
+                    for f in findings.get("pii", []):
+                        where_steps.append(f"Step {f.get('step_index', '?')} (PII)")
+                    for f in findings.get("groundedness", []):
+                        ev = f.get('evidence_step_index') or f.get('evidence_step')
+                        where_steps.append(f"Step {ev if ev is not None else '?'} (Groundedness)")
+
+                    where_text = ", ".join(where_steps) if where_steps else "None (Trace is fully compliant)"
+
+                    with st.container(border=True):
+                        st.markdown("#### 🎯 Reviewer Audit Briefing")
+                        c_w1, c_w2 = st.columns(2)
+                        with c_w1:
+                            st.markdown(f"**WHAT Happened?**\n\n{summary}")
+                            st.markdown(f"**WHERE?**\n\n`{where_text}`")
+                        with c_w2:
+                            st.markdown(f"**WHY Flagged?**\n\nRisk score of {score:.1f} ({tier}) derived from: {scope_count} scope violations, {pii_count} sensitive PII leaks, {ground_count} groundedness issues.")
+                            st.markdown("**WHAT Evidence?**\n\nSee chronological step timeline and evidence tabs below for exact rule definitions and redacted excerpts.")
+
+                    # 4. Chronological Execution Timeline with Inline Findings Overlay
+                    timeline = trace_detail.get("execution_timeline", [])
+                    render_trace_timeline(timeline, findings)
+
+                    st.write("")
+
+                    # 5. Technical Evidence Panel
+                    render_evidence_panel(findings)
+
+    # =========================================================================
+    # TAB 2: RISK ANALYTICS (Aggregate SQL & Athena)
+    # =========================================================================
+    with tab_analytics:
+        st.subheader("📈 Historical Governance & Risk Analytics")
+        st.caption("Macro governance trends, violation distributions, and tool failure analytics queried via Athena SQL.")
+
+        # Row 1: Risk Distribution & Average Risk by Task
+        c_left, c_right = st.columns(2)
+
+        with c_left:
+            try:
+                df_dist = athena_service.run_named_query("02_risk_distribution")
+                st.plotly_chart(chart_risk_distribution(df_dist), use_container_width=True)
+            except Exception as exc:
+                st.error(f"⚠️ Query 02 (Risk Distribution) failed: {exc}")
+
+        with c_right:
+            try:
+                df_avg_task = athena_service.run_named_query("01_avg_risk_by_task")
+                st.plotly_chart(chart_avg_risk_by_task(df_avg_task), use_container_width=True)
+            except Exception as exc:
+                st.error(f"⚠️ Query 01 (Avg Risk by Task) failed: {exc}")
+
+        # Row 2: Daily Risk Trend & High Risk Proportions
+        st.write("---")
+        try:
+            df_trend = athena_service.run_named_query("09_daily_risk_trend")
+            st.plotly_chart(chart_daily_risk_trend(df_trend), use_container_width=True)
+        except Exception as exc:
+            st.error(f"⚠️ Query 09 (Daily Risk Trend) failed: {exc}")
+
+        # Row 3: Tool-Level Violation Analysis & High Risk by Date
+        st.write("---")
+        c_tool, c_high_date = st.columns(2)
+
+        with c_tool:
+            try:
+                df_tools = athena_service.run_named_query("10_tool_violation_analysis")
+                st.plotly_chart(chart_tool_violations(df_tools), use_container_width=True)
+            except Exception as exc:
+                st.error(f"⚠️ Query 10 (Tool Violation Analysis) failed: {exc}")
+
+        with c_high_date:
+            try:
+                df_high_date = athena_service.run_named_query("03_high_risk_by_date")
+                st.markdown("#### 🚨 High-Risk Traces by Date")
+                st.dataframe(df_high_date, use_container_width=True, hide_index=True)
+            except Exception as exc:
+                st.error(f"⚠️ Query 03 (High Risk by Date) failed: {exc}")
+
+        # Row 4: Multi-Control Violation Tables (Scope, PII, Groundedness, Unsupported, Contradicted)
+        st.write("---")
+        st.markdown("### 🔍 Multi-Control Breakdown Tables")
+
+        t_scope, t_pii, t_ground, t_unsupp, t_contra = st.tabs([
+            "Scope by Task",
+            "PII Leakage by Task",
+            "Groundedness by Task",
+            "Unsupported Claims",
+            "Contradicted Claims",
+        ])
+
+        with t_scope:
+            try:
+                df_sc = athena_service.run_named_query("04_scope_violations_by_task")
+                st.dataframe(df_sc, use_container_width=True, hide_index=True)
+            except Exception as exc:
+                st.error(f"⚠️ Query 04 (Scope Violations by Task) failed: {exc}")
+
+        with t_pii:
+            try:
+                df_pi = athena_service.run_named_query("05_pii_by_task")
+                st.dataframe(df_pi, use_container_width=True, hide_index=True)
+            except Exception as exc:
+                st.error(f"⚠️ Query 05 (PII by Task) failed: {exc}")
+
+        with t_ground:
+            try:
+                df_gr = athena_service.run_named_query("06_groundedness_failures")
+                st.dataframe(df_gr, use_container_width=True, hide_index=True)
+            except Exception as exc:
+                st.error(f"⚠️ Query 06 (Groundedness Failures) failed: {exc}")
+
+        with t_unsupp:
+            try:
+                df_un = athena_service.run_named_query("07_unsupported_claims")
+                st.dataframe(df_un, use_container_width=True, hide_index=True)
+            except Exception as exc:
+                st.error(f"⚠️ Query 07 (Unsupported Claims) failed: {exc}")
+
+        with t_contra:
+            try:
+                df_ct = athena_service.run_named_query("08_contradicted_claims")
+                st.dataframe(df_ct, use_container_width=True, hide_index=True)
+            except Exception as exc:
+                st.error(f"⚠️ Query 08 (Contradicted Claims) failed: {exc}")
+
+        # Athena SQL Query Inspector (Security & Transparency)
+        st.write("---")
+        with st.expander("🛠️ Athena SQL Query Inspector (Predefined Queries)", expanded=False):
+            st.caption("Inspect the exact Presto/Trino SQL queries powering each visualization.")
+            selected_query = st.selectbox(
+                "Select Predefined Query to Inspect:",
+                options=[
+                    "01_avg_risk_by_task",
+                    "02_risk_distribution",
+                    "03_high_risk_by_date",
+                    "04_scope_violations_by_task",
+                    "05_pii_by_task",
+                    "06_groundedness_failures",
+                    "07_unsupported_claims",
+                    "08_contradicted_claims",
+                    "09_daily_risk_trend",
+                    "10_tool_violation_analysis",
+                ],
+            )
+            sql_path = os.path.join("analytics", "sql", f"{selected_query}.sql")
+            if os.path.exists(sql_path):
+                with open(sql_path, encoding="utf-8") as f:
+                    st.code(f.read(), language="sql")
+
+
+if __name__ == "__main__":
+    main()
