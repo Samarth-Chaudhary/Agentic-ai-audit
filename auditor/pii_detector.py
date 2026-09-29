@@ -38,6 +38,9 @@ class PIIAuditResult(BaseModel):
     findings_by_severity: dict[str, int] = Field(default_factory=dict, description="Counts by severity")
     findings_by_type: dict[str, int] = Field(default_factory=dict, description="Counts by PII/secret type")
     summary: str = Field(description="Summary narrative of sensitive data audit")
+    pii_engine: str = Field(default="", description="Concrete PII detection engine")
+    is_degraded: bool = Field(default=False, description="Whether PII detection ran in degraded mode")
+    degraded_reasons: list[str] = Field(default_factory=list, description="Reasons for degraded PII execution")
 
 
 class PIIDetector:
@@ -48,6 +51,7 @@ class PIIDetector:
         risk_config: RiskConfig | None = None,
         enable_presidio: bool = True,
     ) -> None:
+        self.risk_config: RiskConfig | None
         if risk_config is None:
             try:
                 loader = PolicyLoader()
@@ -58,9 +62,27 @@ class PIIDetector:
             self.risk_config = risk_config
 
         self.enable_presidio = enable_presidio
-        self._presidio_analyzer = None
+        self._presidio_analyzer: Any | None = None
         if self.enable_presidio:
             self._init_presidio()
+
+    @property
+    def engine_name(self) -> str:
+        """Concrete identifier and version for the active PII engine."""
+        if self._presidio_analyzer is not None:
+            return "presidio-nlp:spacy/en_core_web_sm"
+        return "heuristic:regex-pattern-fallback"
+
+    @property
+    def is_degraded(self) -> bool:
+        """True if Presidio NLP model is unavailable and regex fallback is running."""
+        return self._presidio_analyzer is None
+
+    def get_degraded_reasons(self) -> list[str]:
+        """Collect explicit explanations when operating in degraded fallback mode."""
+        if self._presidio_analyzer is None:
+            return ["Presidio NLP model ('en_core_web_sm') unavailable; using regex pattern fallback"]
+        return []
 
     def _init_presidio(self) -> None:
         """Safely initialize Presidio analyzer if model is available in the environment."""
@@ -466,10 +488,10 @@ class PIIDetector:
         }
         type_counts: dict[str, int] = {}
 
-        for f in all_findings:
-            sev_str = f.severity.value if hasattr(f.severity, "value") else str(f.severity).upper()
+        for finding in all_findings:
+            sev_str = finding.severity.value if hasattr(finding.severity, "value") else str(finding.severity).upper()
             severity_counts[sev_str] = severity_counts.get(sev_str, 0) + 1
-            type_counts[f.pii_type] = type_counts.get(f.pii_type, 0) + 1
+            type_counts[finding.pii_type] = type_counts.get(finding.pii_type, 0) + 1
 
         total = len(all_findings)
         high_or_crit = severity_counts.get("HIGH", 0) + severity_counts.get("CRITICAL", 0)
@@ -499,6 +521,10 @@ class PIIDetector:
             extra_data={"total_findings": total, "severities": severity_counts, "types": type_counts},
         )
 
+        for finding in all_findings:
+            if not finding.engine:
+                finding.engine = self.engine_name
+
         return PIIAuditResult(
             trace_id=trace_obj.trace_id,
             task_type=trace_obj.task_type,
@@ -508,4 +534,7 @@ class PIIDetector:
             findings_by_severity=severity_counts,
             findings_by_type=type_counts,
             summary=summary,
+            pii_engine=self.engine_name,
+            is_degraded=self.is_degraded,
+            degraded_reasons=self.get_degraded_reasons(),
         )

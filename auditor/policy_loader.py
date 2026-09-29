@@ -159,6 +159,8 @@ class PolicyLoader:
 
         if self._policies_config is None:
             self.load_policies_config()
+        if self._policies_config is None:
+            raise ConfigurationError("Failed to initialize policies configuration.")
 
         policies = self._policies_config.policies
         clean_task_type = task_type.strip()
@@ -201,6 +203,8 @@ class PolicyLoader:
         """Return the loaded risk configuration, loading if not already cached."""
         if self._risk_config is None:
             self.load_risk_config()
+        if self._risk_config is None:
+            raise ConfigurationError("Failed to initialize risk configuration.")
         return self._risk_config
 
 

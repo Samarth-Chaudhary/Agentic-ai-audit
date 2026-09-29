@@ -27,6 +27,7 @@ from auditor.groundedness_detector import GroundednessDetector
 from auditor.models import (
     AuditResult,
     CountsSummary,
+    EngineInfo,
     RawTracePointer,
     RiskTier,
     StepType,
@@ -43,6 +44,18 @@ logger = get_logger(__name__, component="audit_orchestrator")
 
 class AuditOrchestrationError(Exception):
     """Base exception for audit orchestration failures."""
+
+
+class DegradedEngineError(AuditOrchestrationError):
+    """Raised when an audit operates in degraded heuristic mode with fail_on_degraded=True."""
+
+    def __init__(self, reasons: list[str]) -> None:
+        self.reasons = reasons
+        msg = (
+            f"Audit execution refused because required ML engine(s) are degraded ({len(reasons)} reason(s)):\n"
+            + "\n".join(f"- {r}" for r in reasons)
+        )
+        super().__init__(msg)
 
 
 class TraceValidationError(AuditOrchestrationError):
@@ -92,6 +105,7 @@ class AuditOrchestrator:
         risk_engine: RiskEngine | None = None,
         trace_validator: TraceValidator | None = None,
         audit_schema_path: Path | str | None = None,
+        fail_on_degraded: bool = False,
     ) -> None:
         self.policy_loader = policy_loader or PolicyLoader()
         self.risk_config = self.policy_loader.load_risk_config()
@@ -101,6 +115,7 @@ class AuditOrchestrator:
         self.groundedness_detector = groundedness_detector or GroundednessDetector(risk_config=self.risk_config)
         self.risk_engine = risk_engine or RiskEngine(risk_config=self.risk_config)
         self.trace_validator = trace_validator or TraceValidator()
+        self.fail_on_degraded = fail_on_degraded or (os.environ.get("AUDIT_FAIL_ON_DEGRADED", "0") == "1")
 
         self.audit_schema_path = Path(audit_schema_path) if audit_schema_path else _find_audit_result_schema_path()
         self._audit_schema: dict[str, Any] | None = None
@@ -135,6 +150,7 @@ class AuditOrchestrator:
         raw_trace_uri: str | None = None,
         s3_bucket: str | None = None,
         s3_key: str | None = None,
+        fail_on_degraded: bool | None = None,
     ) -> AuditResult:
         """Execute the end-to-end local audit pipeline on an agent execution trace.
 
@@ -235,7 +251,46 @@ class AuditOrchestrator:
         risk_res = self.risk_engine.to_risk_result(risk_breakdown)
         processed_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
-        status = "FLAGGED" if risk_breakdown.risk_tier in (RiskTier.HIGH, RiskTier.CRITICAL) else "COMPLETED"
+        # Step 8: Assemble concrete engine identity and inspect degradation status
+        is_degraded = (
+            bool(groundedness_result.is_degraded)
+            or bool(pii_result.is_degraded)
+        )
+        degraded_reasons = (
+            list(groundedness_result.degraded_reasons)
+            + list(pii_result.degraded_reasons)
+        )
+        engine_info = EngineInfo(
+            nli_engine=groundedness_result.nli_engine or self.groundedness_detector.nli_engine_name,
+            embedding_engine=groundedness_result.embedding_engine or self.groundedness_detector.embedding_engine_name,
+            pii_engine=pii_result.pii_engine or self.pii_detector.engine_name,
+            is_degraded=is_degraded,
+            degraded_reasons=degraded_reasons,
+        )
+
+        should_fail_on_degraded = (
+            self.fail_on_degraded
+            if fail_on_degraded is None
+            else fail_on_degraded
+        ) or (os.environ.get("AUDIT_FAIL_ON_DEGRADED", "0") == "1")
+
+        if should_fail_on_degraded and is_degraded:
+            logger.error_event(
+                event="audit_refused_degraded",
+                status="refused",
+                message="Audit execution refused because required ML engine(s) are degraded",
+                trace_id=trace.trace_id,
+                task_type=trace.task_type,
+                extra_data={"reasons": degraded_reasons},
+            )
+            raise DegradedEngineError(degraded_reasons)
+
+        if risk_breakdown.risk_tier in (RiskTier.HIGH, RiskTier.CRITICAL):
+            status = "FLAGGED"
+        elif is_degraded:
+            status = "DEGRADED"
+        else:
+            status = "COMPLETED"
 
         audit_result = AuditResult(
             trace_id=trace.trace_id,
@@ -250,6 +305,9 @@ class AuditOrchestrator:
             summary=risk_breakdown.summary,
             raw_trace_storage_pointer=storage_pointer,
             risk_result=risk_res,
+            engine_info=engine_info,
+            is_degraded=is_degraded,
+            degraded_reasons=degraded_reasons,
             status=status,
         )
 
@@ -271,6 +329,8 @@ class AuditOrchestrator:
                 "scope_violations": counts.scope_violations,
                 "pii_entities_detected": counts.pii_entities_detected,
                 "unsupported_claims": counts.unsupported_claims,
+                "is_degraded": is_degraded,
+                "engine_info": engine_info.model_dump(),
             },
         )
 
@@ -283,6 +343,7 @@ class AuditOrchestrator:
         raw_trace_uri: str | None = None,
         s3_bucket: str | None = None,
         s3_key: str | None = None,
+        fail_on_degraded: bool | None = None,
     ) -> dict[str, Any]:
         """Execute audit pipeline and return result as a dictionary."""
         result = self.audit(
@@ -290,5 +351,6 @@ class AuditOrchestrator:
             raw_trace_uri=raw_trace_uri,
             s3_bucket=s3_bucket,
             s3_key=s3_key,
+            fail_on_degraded=fail_on_degraded,
         )
         return result.model_dump(mode="json")

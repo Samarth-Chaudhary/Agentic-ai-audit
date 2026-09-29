@@ -35,6 +35,7 @@ class ScopeDetector:
     """Evaluates agent execution traces against declarative task governance policies."""
 
     def __init__(self, risk_config: RiskConfig | None = None) -> None:
+        self.risk_config: RiskConfig | None
         if risk_config is None:
             try:
                 loader = PolicyLoader()
@@ -124,6 +125,10 @@ class ScopeDetector:
             task_type=trace_obj.task_type,
             extra_data={"total_violations": total, "severities": severity_counts},
         )
+
+        for f in findings:
+            if not f.engine:
+                f.engine = "policy:task-scope-rules-v1"
 
         return ScopeAuditResult(
             trace_id=trace_obj.trace_id,
