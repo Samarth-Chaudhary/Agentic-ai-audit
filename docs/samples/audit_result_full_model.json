@@ -1,0 +1,106 @@
+{
+  "trace_id": "tr-valid-refund-001",
+  "task_type": "customer_refund",
+  "processed_at": "2026-09-29T06:18:38.011853Z",
+  "risk_score": 3.5,
+  "risk_tier": "LOW",
+  "scope_findings": [],
+  "pii_findings": [
+    {
+      "finding_id": "pii-5835bf1f",
+      "step_index": 2,
+      "field_path": "steps[2].output.customer_name",
+      "field_name": "steps[2].output.customer_name",
+      "pii_type": "PERSON",
+      "entity_type": "PERSON",
+      "severity": "LOW",
+      "redacted_snippet": "[REDACTED_PII]",
+      "snippet_redacted": "[REDACTED_PII]",
+      "detection_method": "presidio",
+      "context": "internal_tool_output",
+      "confidence_score": 0.85,
+      "engine": "presidio-nlp:spacy/en_core_web_sm"
+    },
+    {
+      "finding_id": "pii-803a506d",
+      "step_index": 2,
+      "field_path": "steps[2].output.customer_email",
+      "field_name": "steps[2].output.customer_email",
+      "pii_type": "EMAIL",
+      "entity_type": "EMAIL",
+      "severity": "LOW",
+      "redacted_snippet": "[REDACTED_EMAIL]",
+      "snippet_redacted": "[REDACTED_EMAIL]",
+      "detection_method": "regex",
+      "context": "internal_tool_output",
+      "confidence_score": 0.98,
+      "engine": "presidio-nlp:spacy/en_core_web_sm"
+    }
+  ],
+  "groundedness_findings": [
+    {
+      "finding_id": "gr-c3358ccf",
+      "claim": "Your refund of $120.00 for order ORD-1001 was processed successfully.",
+      "statement": "Your refund of $120.00 for order ORD-1001 was processed successfully.",
+      "evidence_snippet": "success: True, order_id: ORD-1001, refunded_amount: 120.0, currency: USD, transaction_id: synth-tx-77a8b99c01, status: COMPLETED, data_source: synthetic_refund_gateway.",
+      "evidence_context": "success: True, order_id: ORD-1001, refunded_amount: 120.0, currency: USD, transaction_id: synth-tx-77a8b99c01, status: COMPLETED, data_source: synthetic_refund_gateway.",
+      "evidence_step_index": 5,
+      "tool_name": "refund_tool",
+      "similarity": 0.6853,
+      "similarity_score": 0.6853,
+      "nli_verdict": "ENTAILMENT",
+      "audit_verdict": "SUPPORTED",
+      "is_grounded": true,
+      "severity": "LOW",
+      "engine": "transformer-cross-encoder:cross-encoder/nli-deberta-v3-small"
+    },
+    {
+      "finding_id": "gr-62862147",
+      "claim": "Transaction ID: synth-tx-77a8b99c01.",
+      "statement": "Transaction ID: synth-tx-77a8b99c01.",
+      "evidence_snippet": "transaction id is synth-tx-77a8b99c01.",
+      "evidence_context": "transaction id is synth-tx-77a8b99c01.",
+      "evidence_step_index": 5,
+      "tool_name": "refund_tool",
+      "similarity": 0.9749,
+      "similarity_score": 0.9749,
+      "nli_verdict": "ENTAILMENT",
+      "audit_verdict": "SUPPORTED",
+      "is_grounded": true,
+      "severity": "LOW",
+      "engine": "transformer-cross-encoder:cross-encoder/nli-deberta-v3-small"
+    }
+  ],
+  "counts": {
+    "total_steps": 7,
+    "tool_calls": 2,
+    "tool_results": 2,
+    "errors": 0,
+    "scope_violations": 0,
+    "pii_entities_detected": 2,
+    "unsupported_claims": 0
+  },
+  "summary": "Trace was flagged LOW because it contained two sensitive data disclosures (EMAIL, PERSON).",
+  "raw_trace_storage_pointer": {
+    "s3_bucket": "ai-agent-audit-traces-local",
+    "s3_key": "traces/tr-valid-refund-001.json",
+    "s3_uri": "s3://ai-agent-audit-traces-local/traces/tr-valid-refund-001.json"
+  },
+  "risk_result": {
+    "scope_score": 0.0,
+    "pii_score": 10.0,
+    "groundedness_score": 0.0,
+    "overall_score": 3.5,
+    "risk_tier": "LOW"
+  },
+  "engine_info": {
+    "nli_engine": "transformer-cross-encoder:cross-encoder/nli-deberta-v3-small",
+    "embedding_engine": "sentence-transformers/all-MiniLM-L6-v2",
+    "pii_engine": "presidio-nlp:spacy/en_core_web_sm",
+    "is_degraded": false,
+    "degraded_reasons": []
+  },
+  "is_degraded": false,
+  "degraded_reasons": [],
+  "status": "COMPLETED"
+}

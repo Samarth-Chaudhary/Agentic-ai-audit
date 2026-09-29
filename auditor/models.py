@@ -89,6 +89,8 @@ class ScopeFinding(BaseModel):
     violation_type: str | None = Field(default=None, description="Category classification")
     details: str | None = Field(default=None, description="Detailed description alias")
 
+    engine: str | None = Field(default=None, description="Concrete engine that evaluated the finding")
+
     @model_validator(mode="before")
     @classmethod
     def normalize_fields(cls, data: Any) -> Any:
@@ -130,6 +132,7 @@ class PIIFinding(BaseModel):
     detection_method: str = Field(default="regex", description="Detection method (regex, regex+luhn, presidio)")
     context: str | None = Field(default=None, description="Contextual classification for audit interpretation")
     confidence_score: float = Field(default=1.0, ge=0.0, le=1.0, description="Detection confidence score")
+    engine: str | None = Field(default=None, description="Concrete PII/regex engine that detected the entity")
 
     @model_validator(mode="before")
     @classmethod
@@ -178,6 +181,7 @@ class GroundednessFinding(BaseModel):
     audit_verdict: str | None = Field(default=None, description="Final audit verdict: SUPPORTED, CONTRADICTED, UNSUPPORTED")
     is_grounded: bool = Field(default=True, description="True if claim is supported by tool evidence")
     severity: RiskTier = Field(default=RiskTier.LOW, description="Severity rating")
+    engine: str | None = Field(default=None, description="Concrete NLI/heuristic engine that evaluated the claim")
 
     @model_validator(mode="before")
     @classmethod
@@ -252,6 +256,15 @@ class RiskResult(BaseModel):
     risk_tier: RiskTier
 
 
+class EngineInfo(BaseModel):
+    """Concrete engine identity and degradation status for governance audit."""
+    nli_engine: str = Field(description="Concrete NLI model identifier and version")
+    embedding_engine: str = Field(description="Concrete embedding model identifier and version")
+    pii_engine: str = Field(description="Concrete PII detection engine")
+    is_degraded: bool = Field(default=False, description="Whether any engine operated in degraded fallback mode")
+    degraded_reasons: list[str] = Field(default_factory=list, description="Explanations for degraded operation")
+
+
 class AuditResult(BaseModel):
     """Complete audit engine output for both DynamoDB operational storage and S3 analytics."""
     trace_id: str = Field(min_length=1)
@@ -266,4 +279,7 @@ class AuditResult(BaseModel):
     summary: str
     raw_trace_storage_pointer: RawTracePointer
     risk_result: RiskResult | None = None
+    engine_info: EngineInfo | None = None
+    is_degraded: bool = False
+    degraded_reasons: list[str] = Field(default_factory=list)
     status: str | None = "COMPLETED"

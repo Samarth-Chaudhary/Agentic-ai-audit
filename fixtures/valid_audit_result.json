@@ -13,7 +13,8 @@
       "is_grounded": true,
       "similarity_score": 0.96,
       "evidence_context": "lookup_order_status output: status SHIPPED, carrier FedEx, tracking_number 987654321012",
-      "severity": "LOW"
+      "severity": "LOW",
+      "engine": "transformer-cross-encoder:cross-encoder/nli-deberta-v3-small"
     }
   ],
   "counts": {
@@ -38,5 +39,14 @@
     "overall_score": 12.5,
     "risk_tier": "LOW"
   },
+  "engine_info": {
+    "nli_engine": "transformer-cross-encoder:cross-encoder/nli-deberta-v3-small",
+    "embedding_engine": "sentence-transformers/all-MiniLM-L6-v2",
+    "pii_engine": "presidio-nlp:spacy/en_core_web_sm",
+    "is_degraded": false,
+    "degraded_reasons": []
+  },
+  "is_degraded": false,
+  "degraded_reasons": [],
   "status": "COMPLETED"
 }

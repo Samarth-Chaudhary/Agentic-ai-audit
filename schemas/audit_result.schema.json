@@ -83,13 +83,55 @@
     },
     "status": {
       "type": "string",
-      "enum": ["COMPLETED", "FLAGGED", "FAILED"],
+      "enum": ["COMPLETED", "FLAGGED", "FAILED", "DEGRADED"],
       "default": "COMPLETED",
       "description": "Processing status of the audit execution."
+    },
+    "engine_info": {
+      "oneOf": [
+        { "$ref": "#/definitions/engine_info" },
+        { "type": "null" }
+      ]
+    },
+    "is_degraded": {
+      "type": "boolean",
+      "description": "True if audit ran with one or more degraded heuristic engines."
+    },
+    "degraded_reasons": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "List of reasons or fallbacks triggered during audit."
     }
   },
   "additionalProperties": false,
   "definitions": {
+    "engine_info": {
+      "type": "object",
+      "required": ["nli_engine", "embedding_engine", "pii_engine", "is_degraded"],
+      "properties": {
+        "nli_engine": {
+          "type": "string",
+          "description": "Concrete NLI model identifier and version."
+        },
+        "embedding_engine": {
+          "type": "string",
+          "description": "Concrete embedding model identifier and version."
+        },
+        "pii_engine": {
+          "type": "string",
+          "description": "Concrete PII engine identifier (presidio model vs regex fallback)."
+        },
+        "is_degraded": {
+          "type": "boolean",
+          "description": "Whether any engine ran in degraded fallback mode."
+        },
+        "degraded_reasons": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
     "scope_finding": {
       "type": "object",
       "required": ["tool_name", "severity"],
@@ -118,6 +160,9 @@
         "step_index": {
           "type": ["integer", "null"],
           "minimum": 0
+        },
+        "engine": {
+          "type": ["string", "null"]
         }
       },
       "additionalProperties": false
@@ -164,6 +209,9 @@
           "type": "number",
           "minimum": 0.0,
           "maximum": 1.0
+        },
+        "engine": {
+          "type": ["string", "null"]
         }
       },
       "additionalProperties": false
@@ -218,6 +266,9 @@
         "severity": {
           "type": "string",
           "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+        },
+        "engine": {
+          "type": ["string", "null"]
         }
       },
       "additionalProperties": false
