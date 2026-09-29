@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    name: Test & Validate (${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11"]
+
+    env:
+      AWS_ACCESS_KEY_ID: testing
+      AWS_SECRET_ACCESS_KEY: testing
+      AWS_SECURITY_TOKEN: testing
+      AWS_SESSION_TOKEN: testing
+      AWS_DEFAULT_REGION: us-east-1
+      DYNAMODB_TABLE_NAME: AgentAuditResults-test
+      RAW_TRACE_BUCKET: agent-audit-raw-traces-test
+      AUDIT_RESULTS_BUCKET: agent-audit-analytics-results-test
+      ATHENA_DATABASE: agent_audit_analytics_test
+      ATHENA_WORKGROUP: primary
+      ATHENA_RESULTS_BUCKET: agent-audit-analytics-results-test
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install ruff
+
+    - name: Run lint and syntax checks
+      run: |
+        python -m compileall .
+        ruff check .
+
+    - name: Validate schemas and fixtures
+      run: |
+        python -c "
+        import json, glob, jsonschema
+        with open('schemas/trace.schema.json', encoding='utf-8') as f:
+            trace_schema = json.load(f)
+        with open('schemas/audit_result.schema.json', encoding='utf-8') as f:
+            result_schema = json.load(f)
+        jsonschema.Draft202012Validator.check_schema(trace_schema)
+        jsonschema.Draft202012Validator.check_schema(result_schema)
+        print('Core schemas validated successfully.')
+
+        with open('fixtures/valid_audit_result.json', encoding='utf-8') as f:
+            jsonschema.validate(json.load(f), result_schema)
+        print('Validated fixture: fixtures/valid_audit_result.json')
+
+        for path in glob.glob('fixtures/**/*.json', recursive=True):
+            if 'expected_results' in path or 'invalid_' in path or 'audit_result' in path:
+                continue
+            with open(path, encoding='utf-8') as f:
+                data = json.load(f)
+            jsonschema.validate(data, trace_schema)
+            print(f'Validated fixture: {path}')
+        print('All valid JSON fixtures conform to trace schema.')
+        "
+
+    - name: Run pytest (Unit, Negative, Fixture & Mocked AWS tests)
+      run: |
+        pytest tests/ -v --ignore=tests/benchmarks
