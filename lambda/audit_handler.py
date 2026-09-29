@@ -12,11 +12,12 @@ import json
 import logging
 import os
 import urllib.parse
+from datetime import datetime, timezone
 from typing import Any
 
-from auditor.orchestrator import (
-    AuditOrchestrator,
-)
+import boto3
+
+from auditor.orchestrator import AuditOrchestrator
 
 try:
     from .repositories.dynamodb_repository import DynamoDBRepository
@@ -171,7 +172,6 @@ def handler(
             dlq_url = os.environ.get("DLQ_URL") or os.environ.get("TRACES_DLQ_URL")
             if dlq_url:
                 try:
-                    import boto3
                     sqs_client = boto3.client("sqs")
                     sqs_client.send_message(
                         QueueUrl=dlq_url,
@@ -199,7 +199,6 @@ def handler(
 
         # 12. Write deterministic analytics result to S3
         # Extract date string for partition: date=YYYY-MM-DD
-        from datetime import datetime, timezone
         processed_at = audit_result.get("processed_at", "")
         date_str = processed_at[:10] if len(processed_at) >= 10 else datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
