@@ -45,6 +45,26 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 
+[tool.coverage.run]
+branch = true
+source = ["auditor"]
+omit = [
+    "tests/*",
+    "auditor/adapters/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 80
+precision = 2
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+
 [tool.ruff]
 line-length = 120
 target-version = "py310"

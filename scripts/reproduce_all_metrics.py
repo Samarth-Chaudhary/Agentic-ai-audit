@@ -68,6 +68,14 @@ EXPECTED_METRICS: dict[str, Any] = {
         "defeated": 5,
         "resilience_rate": 44.44,
     },
+    # Phase 4 Pipeline Load Test (2,500 synthetic traces)
+    "phase4_load_test": {
+        "traces_processed": 2500,
+        "min_throughput": 20.0,
+        "max_median_latency_ms": 50.0,
+        "max_p95_latency_ms": 100.0,
+        "max_cold_start_rate_pct": 2.0,
+    },
 }
 
 
@@ -160,6 +168,28 @@ def verify_all_metrics() -> None:
     assert adv_data["attacks_defended"] == exp_adv["defended"], f"Expected {exp_adv['defended']} defended, got {adv_data['attacks_defended']}"
     assert adv_data["attacks_successful_against_auditor"] == exp_adv["defeated"], f"Expected {exp_adv['defeated']} defeated, got {adv_data['attacks_successful_against_auditor']}"
     print(f"[PASS] Phase 3 Red-Team Adversarial Suite verified: {adv_data['attacks_defended']}/9 Defended, {adv_data['attacks_successful_against_auditor']}/9 Real Vulnerabilities Documented.")
+
+    # 5. Verify Phase 4 Pipeline Load Testing
+    load_path = REPO_ROOT / "data" / "load_test" / "load_test_results.json"
+    if not load_path.exists():
+        raise FileNotFoundError(f"Missing Phase 4 load test results at {load_path}")
+
+    with open(load_path, encoding="utf-8") as f:
+        load_data = json.load(f)
+
+    exp_lt = EXPECTED_METRICS["phase4_load_test"]
+    metrics = load_data.get("metrics", {})
+    assert metrics.get("traces_processed") == exp_lt["traces_processed"], f"Expected {exp_lt['traces_processed']} traces, got {metrics.get('traces_processed')}"
+    assert metrics.get("dynamodb_verified_records") == exp_lt["traces_processed"], "Mismatch in DynamoDB record count"
+    assert metrics.get("throughput_traces_per_sec", 0.0) >= exp_lt["min_throughput"], "Throughput below SLA"
+    assert metrics.get("latency_median_ms", 999.0) <= exp_lt["max_median_latency_ms"], "Median latency above threshold"
+    assert metrics.get("latency_p95_ms", 999.0) <= exp_lt["max_p95_latency_ms"], "p95 latency above threshold"
+    assert metrics.get("cold_start_rate_pct", 100.0) <= exp_lt["max_cold_start_rate_pct"], "Cold start rate above threshold"
+    print(
+        f"[PASS] Phase 4 Engineering Proof verified: {metrics['traces_processed']} synthetic traces processed, "
+        f"Throughput={metrics['throughput_traces_per_sec']} traces/sec, Median Latency={metrics['latency_median_ms']} ms, "
+        f"p95={metrics['latency_p95_ms']} ms, Cold Start={metrics['cold_start_rate_pct']}%."
+    )
 
     print("=" * 80)
     print("SUCCESS: 100% of published metrics match repository outputs with zero discrepancies.")

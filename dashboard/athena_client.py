@@ -26,9 +26,8 @@ SQL_DIR = Path(__file__).parent.parent / "analytics" / "sql"
 # -----------------------------------------------------------------------------
 DEMO_ANALYTICS: dict[str, list[dict[str, Any]]] = {
     "01_avg_risk_by_task": [
-        {"task_type": "financial_reporting", "total_traces": 58, "avg_risk_score": 67.4, "min_risk_score": 10.0, "max_risk_score": 95.0},
-        {"task_type": "financial_analysis", "total_traces": 44, "avg_risk_score": 48.2, "min_risk_score": 5.0, "max_risk_score": 85.0},
-        {"task_type": "customer_support", "total_traces": 112, "avg_risk_score": 22.6, "min_risk_score": 0.0, "max_risk_score": 88.0},
+        {"task_type": "customer_refund", "total_traces": 112, "avg_risk_score": 35.4, "min_risk_score": 0.0, "max_risk_score": 88.0},
+        {"task_type": "research_summary", "total_traces": 102, "avg_risk_score": 52.8, "min_risk_score": 5.0, "max_risk_score": 95.0},
     ],
     "02_risk_distribution": [
         {"risk_tier": "LOW", "trace_count": 118, "percentage_share": 55.14},
@@ -44,30 +43,26 @@ DEMO_ANALYTICS: dict[str, list[dict[str, Any]]] = {
         {"date": "2026-09-27", "total_traces": 49, "high_or_critical_traces": 14, "high_risk_percentage": 28.57},
     ],
     "04_scope_violations_by_task": [
-        {"task_type": "financial_reporting", "total_traces": 58, "total_scope_violations": 19, "traces_with_violations": 15, "violation_rate_percentage": 25.86},
-        {"task_type": "customer_support", "total_traces": 112, "total_scope_violations": 11, "traces_with_violations": 9, "violation_rate_percentage": 8.04},
-        {"task_type": "financial_analysis", "total_traces": 44, "total_scope_violations": 5, "traces_with_violations": 4, "violation_rate_percentage": 9.09},
+        {"task_type": "customer_refund", "total_traces": 112, "total_scope_violations": 11, "traces_with_violations": 9, "violation_rate_percentage": 8.04},
+        {"task_type": "research_summary", "total_traces": 102, "total_scope_violations": 24, "traces_with_violations": 19, "violation_rate_percentage": 18.63},
     ],
     "05_pii_by_task": [
-        {"task_type": "customer_support", "total_traces": 112, "total_pii_entities": 34, "traces_with_pii": 21, "pii_leakage_rate_percentage": 18.75},
-        {"task_type": "financial_reporting", "total_traces": 58, "total_pii_entities": 14, "traces_with_pii": 8, "pii_leakage_rate_percentage": 13.79},
-        {"task_type": "financial_analysis", "total_traces": 44, "total_pii_entities": 4, "traces_with_pii": 3, "pii_leakage_rate_percentage": 6.82},
+        {"task_type": "customer_refund", "total_traces": 112, "total_pii_entities": 34, "traces_with_pii": 21, "pii_leakage_rate_percentage": 18.75},
+        {"task_type": "research_summary", "total_traces": 102, "total_pii_entities": 18, "traces_with_pii": 11, "pii_leakage_rate_percentage": 10.78},
     ],
     "06_groundedness_failures": [
-        {"task_type": "financial_analysis", "total_traces": 44, "total_groundedness_failures": 24, "total_unsupported_claims": 16, "total_contradicted_claims": 8, "traces_with_hallucinations": 14, "hallucination_rate_percentage": 31.82},
-        {"task_type": "financial_reporting", "total_traces": 58, "total_groundedness_failures": 21, "total_unsupported_claims": 14, "total_contradicted_claims": 7, "traces_with_hallucinations": 13, "hallucination_rate_percentage": 22.41},
-        {"task_type": "customer_support", "total_traces": 112, "total_groundedness_failures": 10, "total_unsupported_claims": 8, "total_contradicted_claims": 2, "traces_with_hallucinations": 8, "hallucination_rate_percentage": 7.14},
+        {"task_type": "research_summary", "total_traces": 102, "total_groundedness_failures": 45, "total_unsupported_claims": 30, "total_contradicted_claims": 15, "traces_with_hallucinations": 27, "hallucination_rate_percentage": 26.47},
+        {"task_type": "customer_refund", "total_traces": 112, "total_groundedness_failures": 10, "total_unsupported_claims": 8, "total_contradicted_claims": 2, "traces_with_hallucinations": 8, "hallucination_rate_percentage": 7.14},
     ],
     "07_unsupported_claims": [
-        {"date": "2026-09-27", "task_type": "financial_analysis", "total_traces": 12, "total_unsupported_claims": 6, "avg_unsupported_claims_per_trace": 0.50},
-        {"date": "2026-09-27", "task_type": "financial_reporting", "total_traces": 14, "total_unsupported_claims": 5, "avg_unsupported_claims_per_trace": 0.36},
-        {"date": "2026-09-26", "task_type": "financial_analysis", "total_traces": 10, "total_unsupported_claims": 4, "avg_unsupported_claims_per_trace": 0.40},
-        {"date": "2026-09-25", "task_type": "customer_support", "total_traces": 22, "total_unsupported_claims": 3, "avg_unsupported_claims_per_trace": 0.14},
+        {"date": "2026-09-27", "task_type": "research_summary", "total_traces": 26, "total_unsupported_claims": 11, "avg_unsupported_claims_per_trace": 0.42},
+        {"date": "2026-09-26", "task_type": "research_summary", "total_traces": 10, "total_unsupported_claims": 4, "avg_unsupported_claims_per_trace": 0.40},
+        {"date": "2026-09-25", "task_type": "customer_refund", "total_traces": 22, "total_unsupported_claims": 3, "avg_unsupported_claims_per_trace": 0.14},
     ],
     "08_contradicted_claims": [
-        {"date": "2026-09-27", "task_type": "financial_analysis", "trace_id": "tr-demo-c1", "risk_score": 88.0, "risk_tier": "CRITICAL", "contradicted_claims": 2, "summary": "Direct contradiction regarding EPS and reported growth."},
-        {"date": "2026-09-27", "task_type": "financial_reporting", "trace_id": "tr-demo-c2", "risk_score": 92.5, "risk_tier": "CRITICAL", "contradicted_claims": 1, "summary": "Fabricated guidance figures contradicting SEC filing."},
-        {"date": "2026-09-26", "task_type": "financial_analysis", "trace_id": "tr-demo-c3", "risk_score": 75.0, "risk_tier": "HIGH", "contradicted_claims": 1, "summary": "Stated delivery confirmed when tool returned cancellation."},
+        {"date": "2026-09-27", "task_type": "research_summary", "trace_id": "tr-demo-c1", "risk_score": 88.0, "risk_tier": "CRITICAL", "contradicted_claims": 2, "summary": "Direct contradiction regarding EPS and reported growth."},
+        {"date": "2026-09-27", "task_type": "research_summary", "trace_id": "tr-demo-c2", "risk_score": 92.5, "risk_tier": "CRITICAL", "contradicted_claims": 1, "summary": "Fabricated guidance figures contradicting SEC filing."},
+        {"date": "2026-09-26", "task_type": "customer_refund", "trace_id": "tr-demo-c3", "risk_score": 75.0, "risk_tier": "HIGH", "contradicted_claims": 1, "summary": "Stated delivery confirmed when tool returned cancellation."},
     ],
     "09_daily_risk_trend": [
         {"date": "2026-09-23", "daily_trace_count": 40, "daily_avg_risk": 28.5, "daily_scope_violations": 4, "daily_pii_detections": 6, "daily_groundedness_failures": 7, "daily_high_risk_ratio": 17.5},
@@ -77,10 +72,9 @@ DEMO_ANALYTICS: dict[str, list[dict[str, Any]]] = {
         {"date": "2026-09-27", "daily_trace_count": 49, "daily_avg_risk": 41.2, "daily_scope_violations": 12, "daily_pii_detections": 17, "daily_groundedness_failures": 15, "daily_high_risk_ratio": 28.57},
     ],
     "10_tool_violation_analysis": [
-        {"tool_name": "bash_command_runner", "violation_count": 14, "impacted_traces": 12, "avg_risk_when_violated": 91.5},
-        {"tool_name": "web_search", "violation_count": 11, "impacted_traces": 9, "avg_risk_when_violated": 58.2},
-        {"tool_name": "external_api_requester", "violation_count": 7, "impacted_traces": 5, "avg_risk_when_violated": 74.0},
-        {"tool_name": "delete_customer_record", "violation_count": 3, "impacted_traces": 3, "avg_risk_when_violated": 98.0},
+        {"tool_name": "web_search", "violation_count": 14, "impacted_traces": 12, "avg_risk_when_violated": 78.5},
+        {"tool_name": "refund_tool", "violation_count": 11, "impacted_traces": 9, "avg_risk_when_violated": 85.0},
+        {"tool_name": "order_lookup", "violation_count": 4, "impacted_traces": 4, "avg_risk_when_violated": 52.0},
     ],
 }
 

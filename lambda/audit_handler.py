@@ -164,7 +164,30 @@ def handler(
         trace_dict = s3_repository.get_json(bucket, key)
 
         # 4-10. Validate, detect scope/PII/groundedness, calculate risk, assemble AuditResult
-        audit_result = audit_orchestrator.run(trace_dict, raw_trace_uri=raw_trace_s3_uri)
+        try:
+            audit_result = audit_orchestrator.run(trace_dict, raw_trace_uri=raw_trace_s3_uri)
+        except Exception as exc:
+            logger.error("Audit rejected for malformed trace %s: %s", raw_trace_s3_uri, exc)
+            dlq_url = os.environ.get("DLQ_URL") or os.environ.get("TRACES_DLQ_URL")
+            if dlq_url:
+                try:
+                    import boto3
+                    sqs_client = boto3.client("sqs")
+                    sqs_client.send_message(
+                        QueueUrl=dlq_url,
+                        MessageBody=json.dumps({
+                            "s3_uri": raw_trace_s3_uri,
+                            "bucket": bucket,
+                            "key": key,
+                            "error": str(exc),
+                            "error_type": type(exc).__name__,
+                        }),
+                    )
+                    logger.info("Forwarded malformed trace event to DLQ: %s", dlq_url)
+                except Exception as dlq_err:
+                    logger.error("Failed to forward malformed trace to DLQ: %s", dlq_err)
+            raise
+
         trace_id = audit_result["trace_id"]
         task_type = audit_result.get("task_type", "default")
         risk_tier = audit_result.get("risk_tier", "LOW")

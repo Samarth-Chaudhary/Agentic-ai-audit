@@ -1,0 +1,20 @@
+{
+  "load_test_metadata": {
+    "environment": "moto-simulated AWS infrastructure (S3 -> Lambda -> DynamoDB)",
+    "dataset_tag": "synthetic-for-load-purposes",
+    "notes": "Traces generated purely for throughput and latency benchmarking; strictly disjoint from Phase 2 labeled evaluation set",
+    "timestamp": "2026-09-29T18:30:15Z"
+  },
+  "metrics": {
+    "traces_processed": 2500,
+    "total_wall_clock_time_sec": 69.07,
+    "throughput_traces_per_sec": 36.19,
+    "latency_median_ms": 22.38,
+    "latency_p90_ms": 32.65,
+    "latency_p95_ms": 36.59,
+    "latency_p99_ms": 96.3,
+    "cold_starts_observed": 10,
+    "cold_start_rate_pct": 0.4,
+    "dynamodb_verified_records": 2500
+  }
+}

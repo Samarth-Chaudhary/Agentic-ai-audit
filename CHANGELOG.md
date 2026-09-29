@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.0] - Phase 4: Engineering Proof (2026-09-29)
+
+### Added
+- **Pipeline Load Testing (2,500 Synthetic Traces)**:
+  - Implemented `scripts/load_test_pipeline.py` executing 2,500 synthetic traces through full moto-simulated AWS infrastructure (S3 raw traces -> SQS trigger -> Lambda audit handler -> DynamoDB results + S3 analytics).
+  - All test data explicitly segregated with `dataset_tag: "synthetic-for-load-purposes"` to prevent contamination with Phase 2 accuracy benchmarks.
+  - Measured and published empirical metrics: 36.19 traces/sec throughput, 22.38 ms median latency, 36.59 ms p95 latency, 96.30 ms p99 latency, 0.40% cold-start rate, and 2,500 verified DynamoDB records (`data/load_test/load_test_results.json`).
+- **Pipeline Failure Paths & Edge-Case Resilience**:
+  - Implemented `tests/test_pipeline_failure_paths.py` verifying 3 critical failure paths:
+    1. Duplicate S3 Event: Idempotent DynamoDB writes with zero conflicting records.
+    2. Malformed Trace: Clear contract validation error rejection and Dead Letter Queue (`aws_sqs_queue.traces_dlq`) routing.
+    3. Mid-Audit Timeout: Atomic transaction semantics leaving system clean and retryable with zero corrupted half-written records.
+  - Enhanced `lambda/audit_handler.py` with structured rejection logging and DLQ message forwarding.
+- **Security Pass (IAM Least Privilege & Secret Scanning)**:
+  - Tightened CloudWatch log permissions in `terraform/iam.tf` to project prefix (`arn:aws:logs:...:log-group:/aws/lambda/agent-audit-*:*`) with explicit least privilege justification comments.
+  - Built `scripts/scan_secrets.py` and executed full git commit history scan across 15 high-entropy credential patterns; verified zero committed secrets.
+  - Integrated `pip-audit` dependency vulnerability scanning into GitHub Actions CI.
+- **Enforced Line & Branch Test Coverage Floor**:
+  - Added line and branch coverage tracking over core modules (`auditor/orchestrator.py`, `scope_detector.py`, `pii_detector.py`, `groundedness_detector.py`, `risk_engine.py`).
+  - Achieved **85.48%** combined coverage, enforced by `--cov-branch --cov-fail-under=80` in `pyproject.toml` and `.github/workflows/ci.yml`.
+- **Dashboard Demo Data Consistency**:
+  - Updated `dashboard/api_client.py` and `dashboard/athena_client.py` demo traces and analytics to match canonical trace schema and active tool registry (`order_lookup`, `refund_tool`, `sec_edgar_research`, `calculator`, `web_search`).
+  - Added schema validation tests in `tests/test_dashboard_demo_consistency.py`.
+- **Honest Deployment Status Relabeling**:
+  - Relabeled all AWS infrastructure references in `README.md` to `"Moto-tested, not yet deployed to live AWS account"`.
+
+---
+
 ## [0.3.0] - Phase 3: Independent Evidence (2026-09-29)
 
 ### Added

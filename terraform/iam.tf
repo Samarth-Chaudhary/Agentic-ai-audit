@@ -25,7 +25,9 @@ resource "aws_iam_policy" "audit_lambda_least_privilege" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
-      # 1. CloudWatch Logging
+      # 1. CloudWatch Logging (Least Privilege: Scoped to project Lambda log groups)
+      # Justified wildcard: Trailing wildcard is required because AWS Lambda creates dynamic
+      # log streams (YYYY/MM/DD/[$LATEST]<instance_id>) within the project-specific log group.
       {
         Sid    = "CloudWatchLogs"
         Effect = "Allow"
@@ -34,7 +36,7 @@ resource "aws_iam_policy" "audit_lambda_least_privilege" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
-        Resource = "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/*"
+        Resource = "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/${var.project_name}-*:*"
       },
       # 2. S3 Read of Raw Traces
       {
@@ -95,6 +97,17 @@ resource "aws_iam_policy" "audit_lambda_least_privilege" {
         Resource = [
           aws_sqs_queue.traces_queue.arn
         ]
+      },
+      # 7. SQS Dead Letter Queue (DLQ Forwarding on unrecoverable validation failures)
+      {
+        Sid    = "SQSPublishDLQ"
+        Effect = "Allow"
+        Action = [
+          "sqs:SendMessage"
+        ]
+        Resource = [
+          aws_sqs_queue.traces_dlq.arn
+        ]
       }
     ]
   })
@@ -132,7 +145,9 @@ resource "aws_iam_policy" "read_lambdas_least_privilege" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
-      # 1. CloudWatch Logging
+      # 1. CloudWatch Logging (Least Privilege: Scoped to project Lambda log groups)
+      # Justified wildcard: Trailing wildcard is required because AWS Lambda creates dynamic
+      # log streams (YYYY/MM/DD/[$LATEST]<instance_id>) within the project-specific log group.
       {
         Sid    = "CloudWatchLogs"
         Effect = "Allow"
@@ -141,7 +156,7 @@ resource "aws_iam_policy" "read_lambdas_least_privilege" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
-        Resource = "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/*"
+        Resource = "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/${var.project_name}-*:*"
       },
       # 2. DynamoDB Read Only
       {

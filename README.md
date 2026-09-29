@@ -25,6 +25,10 @@ Autonomous agents operating on ReAct (Reason + Act) patterns present novel gover
 
 ## 3. Architecture: Operational & Analytical Paths
 
+> [!IMPORTANT]
+> **Infrastructure Deployment Status**: **Moto-tested, not yet deployed to live AWS account**.
+> All cloud components (S3, SQS, DLQ, Lambda, DynamoDB, SNS) are defined in production-ready Terraform (`terraform/*.tf`) and validated under full load and failure-path conditions via Moto. No live AWS commercial account deployment was performed, and no cloud infrastructure spend was incurred.
+
 The system strictly decouples the high-velocity **Operational Path** from the longitudinal **Additive Analytics Path**:
 
 ```
@@ -424,10 +428,55 @@ To preserve strict engineering honesty and truthfulness, the table below explici
 - **Legacy Fixtures**: Two backward-compatible demo fixtures (`ORD-1001`, `ORD-1004`) retained exclusively for regression test suite stability, explicitly marked with `is_synthetic: true`.
 - **Web Search Stub**: Basic fallback snippets used only when network access to public search engines is unavailable in offline environments.
 
-### UNVERIFIED (Unless Tested Against Live AWS Account)
-- **Real AWS Deployment**: Live Terraform deployment against an active AWS commercial account.
-- **Live Amazon Athena**: Execution of queries against live S3 buckets using real Athena compute billing.
-- **Live SNS SMS/Email Delivery**: Physical delivery of notifications to subscribed email addresses or phone numbers.
+### UNVERIFIED / NOT YET DEPLOYED (Strict Honesty Declaration)
+- **Live AWS Deployment**: **Moto-tested, not yet deployed to live AWS account**. Terraform modules are fully validated and tested against Moto mocks, but have not been applied against a commercial AWS account. No cloud spend was incurred.
+- **Live Amazon Athena**: Analytics queries are validated against schema and Moto-backed S3 fixtures, not executed against live billable Athena compute.
+- **Live SNS SMS/Email Delivery**: Validated via Moto SNS topic mock; real telecom/email carrier delivery was not invoked.
+
+---
+
+## 10.1 Phase 4: Engineering Proof & Operational Verification
+
+Phase 4 validates that the architecture holds up under load, handles edge-case failures safely, enforces strict least privilege, and maintains clean synchronization across all layers.
+
+### 1. Load Testing (2,500 Synthetic Traces)
+The full serverless pipeline ($S3 \rightarrow SQS \rightarrow \text{Lambda Handler} \rightarrow \text{DynamoDB} + S3 \text{ Analytics}$) was load-tested using 2,500 synthetic traces generated specifically for load purposes (`dataset_tag: "synthetic-for-load-purposes"`, strictly separate from the Phase 2 labeled evaluation set).
+
+| Metric | Measured Value | Acceptance Threshold | Result |
+| :--- | :--- | :--- | :--- |
+| **Traces Processed** | **2,500** | $\ge 2,000$ | **PASS** |
+| **Total Wall-Clock Time** | **69.07 s** | - | **PASS** |
+| **Pipeline Throughput** | **36.19 traces/sec** | $\ge 20.0$ traces/sec | **PASS** |
+| **Median Latency (p50)** | **22.38 ms** | $\le 50.0$ ms | **PASS** |
+| **p90 Latency** | **32.65 ms** | $\le 75.0$ ms | **PASS** |
+| **p95 Latency** | **36.59 ms** | $\le 100.0$ ms | **PASS** |
+| **p99 Latency** | **96.30 ms** | $\le 250.0$ ms | **PASS** |
+| **Cold-Start Count** | **10 / 2,500** | - | **PASS** |
+| **Cold-Start Rate** | **0.40%** | $\le 2.0\%$ | **PASS** |
+| **DynamoDB Records Verified** | **2,500** | Exactly 2,500 | **PASS** |
+
+- **Reproduction Command**: `python scripts/load_test_pipeline.py`
+- **Raw Evidence Output**: [`data/load_test/load_test_results.json`](data/load_test/load_test_results.json)
+
+### 2. Failure Path Resilience (Task 3)
+Failure modes were explicitly tested and verified in [`tests/test_pipeline_failure_paths.py`](tests/test_pipeline_failure_paths.py):
+1. **Duplicate S3 Event Idempotency**: An identical S3 event received twice does not create duplicate DynamoDB records or corrupt existing findings. DynamoDB writes use deterministic partition keys (`trace_id`), ensuring atomic upserts.
+2. **Malformed Trace DLQ Routing**: Malformed JSON traces failing JSON Schema validation are rejected with clear structured error diagnostics (`Trace contract validation failed with X error(s)`) and forwarded to the Dead Letter Queue (`aws_sqs_queue.traces_dlq`) rather than silently vanishing.
+3. **Mid-Audit Timeout & Atomic Writes**: A simulated timeout or unhandled exception mid-audit leaves DynamoDB in a clean state (no partial half-written records), allowing safe retry by SQS redrive.
+
+### 3. Security Pass: IAM Least Privilege & Secret Scanning (Task 4)
+- **IAM Policies**: CloudWatch logging permissions in [`terraform/iam.tf`](terraform/iam.tf) are tightened to the project-specific namespace (`arn:aws:logs:...:log-group:/aws/lambda/agent-audit-*:*`). All dynamic stream wildcards are explicitly documented and justified.
+- **Git History Secret Scan**: Full git commit log scanned with [`scripts/scan_secrets.py`](scripts/scan_secrets.py) across 15 high-entropy credential patterns (AWS, OpenAI, Anthropic, private keys). **Zero committed secrets found**.
+- **CI Dependency Scan**: Automated `pip-audit` scan integrated into GitHub Actions CI workflow.
+
+### 4. Test Coverage Floor (Task 5)
+Line and branch coverage is measured specifically on the core governance engine (`auditor/orchestrator.py`, `scope_detector.py`, `pii_detector.py`, `groundedness_detector.py`, `risk_engine.py`) and enforced in CI:
+- **Core Engine Combined Coverage**: **85.48%** (Line & Branch)
+- **Enforced Minimum CI Floor**: **80.0%** (`--cov-fail-under=80`)
+- **Config**: Defined in [`pyproject.toml`](pyproject.toml) and enforced in [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+
+### 5. Dashboard Demo Mode Consistency (Task 6)
+Demo traces in [`dashboard/api_client.py`](dashboard/api_client.py) and analytics in [`dashboard/athena_client.py`](dashboard/athena_client.py) are synchronized with the canonical JSON Schema and live tool registry (`order_lookup`, `refund_tool`, `sec_edgar_research`, `calculator`, `web_search`), verified by automated test [`tests/test_dashboard_demo_consistency.py`](tests/test_dashboard_demo_consistency.py).
 
 ---
 

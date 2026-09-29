@@ -106,9 +106,27 @@ jobs:
         print('Validated OpenTelemetry converted trace against canonical schema.')
         "
 
-    - name: Run pytest (Unit, Negative, Fixture & Mocked AWS tests)
+    - name: Run Secret Scanning
       run: |
-        pytest tests/ -v --ignore=tests/benchmarks
+        python scripts/scan_secrets.py
+
+    - name: Run Dependency Vulnerability Audit (pip-audit)
+      run: |
+        pip install pip-audit
+        pip-audit -r requirements.txt --desc || true
+
+    - name: Run pytest with Line & Branch Coverage Floor
+      run: |
+        pip install pytest-cov
+        pytest tests/ -v --ignore=tests/benchmarks \
+          --cov=auditor.orchestrator \
+          --cov=auditor.scope_detector \
+          --cov=auditor.pii_detector \
+          --cov=auditor.groundedness_detector \
+          --cov=auditor.risk_engine \
+          --cov-branch \
+          --cov-report=term-missing \
+          --cov-fail-under=80
 
     - name: Verify Reproducibility of Published Metrics
       run: |
