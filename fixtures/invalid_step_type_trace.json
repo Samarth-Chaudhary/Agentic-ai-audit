@@ -1,0 +1,15 @@
+{
+  "trace_id": "tr-invalid-step-type",
+  "schema_version": "1.0.0",
+  "task_type": "customer_support",
+  "started_at": "2026-09-27T10:15:00Z",
+  "ended_at": "2026-09-27T10:15:08Z",
+  "steps": [
+    {
+      "index": 0,
+      "type": "private_thought",
+      "content": "Secret internal chain of thought step that violates contract"
+    }
+  ],
+  "final_answer": "Finished processing."
+}

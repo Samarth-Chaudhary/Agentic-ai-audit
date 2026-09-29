@@ -1,0 +1,316 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://governance.audit.ai/schemas/audit_result.schema.json",
+  "title": "AuditResult",
+  "description": "Structured evaluation result produced by the AI Agent Audit Engine.",
+  "type": "object",
+  "required": [
+    "trace_id",
+    "task_type",
+    "processed_at",
+    "risk_score",
+    "risk_tier",
+    "scope_findings",
+    "pii_findings",
+    "groundedness_findings",
+    "counts",
+    "summary",
+    "raw_trace_storage_pointer"
+  ],
+  "properties": {
+    "trace_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Correlated trace identifier of the audited execution."
+    },
+    "task_type": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Task classification type defining governance policy applied."
+    },
+    "processed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when audit processing completed."
+    },
+    "risk_score": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 100.0,
+      "description": "Composite normalized risk score between 0.0 and 100.0."
+    },
+    "risk_tier": {
+      "type": "string",
+      "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
+      "description": "Categorical risk level assigned based on configured thresholds."
+    },
+    "scope_findings": {
+      "type": "array",
+      "description": "Findings related to tool permissions, call counts, and data source scope.",
+      "items": {
+        "$ref": "#/definitions/scope_finding"
+      }
+    },
+    "pii_findings": {
+      "type": "array",
+      "description": "Findings related to sensitive personal or financial data identification.",
+      "items": {
+        "$ref": "#/definitions/pii_finding"
+      }
+    },
+    "groundedness_findings": {
+      "type": "array",
+      "description": "Findings related to factual grounding of the final answer against tool observations.",
+      "items": {
+        "$ref": "#/definitions/groundedness_finding"
+      }
+    },
+    "counts": {
+      "$ref": "#/definitions/counts_summary"
+    },
+    "summary": {
+      "type": "string",
+      "description": "Human-readable summary of governance audit findings."
+    },
+    "raw_trace_storage_pointer": {
+      "$ref": "#/definitions/raw_trace_pointer"
+    },
+    "risk_result": {
+      "oneOf": [
+        { "$ref": "#/definitions/risk_result" },
+        { "type": "null" }
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["COMPLETED", "FLAGGED", "FAILED"],
+      "default": "COMPLETED",
+      "description": "Processing status of the audit execution."
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "scope_finding": {
+      "type": "object",
+      "required": ["tool_name", "severity"],
+      "properties": {
+        "finding_id": {
+          "type": ["string", "null"]
+        },
+        "tool_name": {
+          "type": "string"
+        },
+        "rule_violated": {
+          "type": "string"
+        },
+        "violation_type": {
+          "type": ["string", "null"]
+        },
+        "severity": {
+          "type": "string"
+        },
+        "detail": {
+          "type": "string"
+        },
+        "details": {
+          "type": ["string", "null"]
+        },
+        "step_index": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "pii_finding": {
+      "type": "object",
+      "required": ["severity"],
+      "properties": {
+        "finding_id": {
+          "type": ["string", "null"]
+        },
+        "step_index": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "field_path": {
+          "type": "string"
+        },
+        "field_name": {
+          "type": ["string", "null"]
+        },
+        "pii_type": {
+          "type": "string"
+        },
+        "entity_type": {
+          "type": ["string", "null"]
+        },
+        "severity": {
+          "type": "string"
+        },
+        "redacted_snippet": {
+          "type": "string"
+        },
+        "snippet_redacted": {
+          "type": ["string", "null"]
+        },
+        "detection_method": {
+          "type": "string"
+        },
+        "context": {
+          "type": ["string", "null"]
+        },
+        "confidence_score": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0
+        }
+      },
+      "additionalProperties": false
+    },
+    "groundedness_finding": {
+      "type": "object",
+      "required": ["finding_id", "severity"],
+      "properties": {
+        "finding_id": {
+          "type": ["string", "null"]
+        },
+        "statement": {
+          "type": ["string", "null"]
+        },
+        "claim": {
+          "type": ["string", "null"]
+        },
+        "is_grounded": {
+          "type": "boolean"
+        },
+        "similarity_score": {
+          "type": ["number", "null"],
+          "minimum": -1.0,
+          "maximum": 1.0
+        },
+        "similarity": {
+          "type": ["number", "null"],
+          "minimum": -1.0,
+          "maximum": 1.0
+        },
+        "evidence_context": {
+          "type": ["string", "null"]
+        },
+        "evidence_snippet": {
+          "type": ["string", "null"]
+        },
+        "evidence_step_index": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "tool_name": {
+          "type": ["string", "null"]
+        },
+        "nli_verdict": {
+          "type": ["string", "null"],
+          "enum": ["ENTAILMENT", "CONTRADICTION", "NEUTRAL", null]
+        },
+        "audit_verdict": {
+          "type": ["string", "null"],
+          "enum": ["SUPPORTED", "CONTRADICTED", "UNSUPPORTED", null]
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "counts_summary": {
+      "type": "object",
+      "required": [
+        "total_steps",
+        "tool_calls",
+        "tool_results",
+        "errors",
+        "scope_violations",
+        "pii_entities_detected",
+        "unsupported_claims"
+      ],
+      "properties": {
+        "total_steps": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "tool_calls": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "tool_results": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "errors": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "scope_violations": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pii_entities_detected": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unsupported_claims": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "raw_trace_pointer": {
+      "type": "object",
+      "required": ["s3_bucket", "s3_key", "s3_uri"],
+      "properties": {
+        "s3_bucket": {
+          "type": "string"
+        },
+        "s3_key": {
+          "type": "string"
+        },
+        "s3_uri": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "risk_result": {
+      "type": "object",
+      "required": ["scope_score", "pii_score", "groundedness_score", "overall_score", "risk_tier"],
+      "properties": {
+        "scope_score": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 100.0
+        },
+        "pii_score": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 100.0
+        },
+        "groundedness_score": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 100.0
+        },
+        "overall_score": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 100.0
+        },
+        "risk_tier": {
+          "type": "string",
+          "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

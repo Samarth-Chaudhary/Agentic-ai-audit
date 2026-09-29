@@ -1,0 +1,37 @@
+{
+  "trace_id": "tr-groundedness-contradicted-002",
+  "schema_version": "1.0.0",
+  "task_type": "financial_analysis",
+  "started_at": "2026-09-27T10:05:00Z",
+  "ended_at": "2026-09-27T10:05:06Z",
+  "metadata": {
+    "agent_id": "financial-analyst-agent",
+    "test_scenario": "contradicted_claim_detection"
+  },
+  "steps": [
+    {
+      "index": 0,
+      "type": "tool_call",
+      "call_id": "call-fin-102",
+      "tool_name": "lookup_financial_metrics",
+      "input": {
+        "metric": "revenue_growth",
+        "period": "Q3"
+      }
+    },
+    {
+      "index": 1,
+      "type": "tool_result",
+      "call_id": "call-fin-102",
+      "tool_name": "lookup_financial_metrics",
+      "output": {
+        "metric": "revenue_growth",
+        "text": "Revenue decreased 20%."
+      },
+      "details": {
+        "data_source": "tool:financial_database"
+      }
+    }
+  ],
+  "final_answer": "Revenue increased 20%."
+}

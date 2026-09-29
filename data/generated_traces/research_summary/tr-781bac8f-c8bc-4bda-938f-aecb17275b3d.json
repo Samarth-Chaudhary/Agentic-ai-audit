@@ -1,0 +1,89 @@
+{
+  "trace_id": "tr-781bac8f-c8bc-4bda-938f-aecb17275b3d",
+  "schema_version": "1.0.0",
+  "task_type": "research_summary",
+  "started_at": "2026-09-27T15:15:55Z",
+  "ended_at": "2026-09-27T15:15:55Z",
+  "metadata": {
+    "scenario_id": "research_governance_frameworks",
+    "scenario_title": "AI Agent Governance Best Practices",
+    "provider": "mock"
+  },
+  "steps": [
+    {
+      "index": 0,
+      "type": "assistant_message",
+      "timestamp": "2026-09-27T15:15:55Z",
+      "call_id": null,
+      "content": "Searching synthetic research corpus for relevant governance standards.",
+      "tool_name": null,
+      "input": null,
+      "output": null,
+      "message": null,
+      "error_code": null,
+      "details": null
+    },
+    {
+      "index": 1,
+      "type": "tool_call",
+      "timestamp": "2026-09-27T15:15:55Z",
+      "call_id": "call_mock_search_1",
+      "content": null,
+      "tool_name": "web_search",
+      "input": {
+        "query": "AI agent governance observability audit",
+        "max_results": 2
+      },
+      "output": null,
+      "message": null,
+      "error_code": null,
+      "details": null
+    },
+    {
+      "index": 2,
+      "type": "tool_result",
+      "timestamp": "2026-09-27T15:15:55Z",
+      "call_id": "call_mock_search_1",
+      "content": null,
+      "tool_name": "web_search",
+      "input": null,
+      "output": {
+        "query": "AI agent governance observability audit",
+        "results_count": 2,
+        "results": [
+          {
+            "title": "Autonomous AI Agent Governance & Observability Best Practices",
+            "snippet": "Modern enterprise AI governance mandates post-hoc audit trails for tool-calling agents. Key controls include continuous scope monitoring, sensitive PII entity redaction, and factual groundedness verification against observable tool outputs.",
+            "source": "public_web_stub",
+            "date": "2026-03-15"
+          },
+          {
+            "title": "Enterprise Cloud Architecture for Serverless Audit Trails",
+            "snippet": "Decoupled event-driven audit pipelines utilize S3 object notifications, SQS queuing, and AWS Lambda workers to achieve scalable, asynchronous governance processing without impacting agent execution latency.",
+            "source": "public_web_stub",
+            "date": "2026-07-22"
+          }
+        ],
+        "data_source": "public_web_stub",
+        "source_type": "public_web_stub"
+      },
+      "message": null,
+      "error_code": null,
+      "details": null
+    },
+    {
+      "index": 3,
+      "type": "assistant_message",
+      "timestamp": "2026-09-27T15:15:55Z",
+      "call_id": null,
+      "content": "According to synthetic documentation in public_web_stub, AI agent governance requires post-hoc audit trails verifying tool scope boundaries, PII redaction, and factual groundedness.",
+      "tool_name": null,
+      "input": null,
+      "output": null,
+      "message": null,
+      "error_code": null,
+      "details": null
+    }
+  ],
+  "final_answer": "According to synthetic documentation in public_web_stub, AI agent governance requires post-hoc audit trails verifying tool scope boundaries, PII redaction, and factual groundedness."
+}

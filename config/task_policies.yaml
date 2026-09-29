@@ -1,0 +1,95 @@
+version: "1.0.0"
+
+policies:
+  customer_refund:
+    description: "Customer service agent handling order verification, status checks, and refund processing"
+    allowed_tools:
+      - order_lookup
+      - refund_tool
+      - calculator
+    allowed_data_sources:
+      - synthetic_order_database
+      - synthetic_refund_gateway
+      - local_calculator_utility
+    max_calls: 8
+    business_rules:
+      - "require_order_lookup_before_refund"
+      - "verify_refund_eligibility"
+      - "refund_amount_must_not_exceed_order_total"
+      - "disallow_manual_credit_card_entry"
+
+  research_summary:
+    description: "Research agent summarizing synthetic technical, regulatory, and market publications"
+    allowed_tools:
+      - web_search
+      - calculator
+    allowed_data_sources:
+      - public_web_stub
+      - local_calculator_utility
+    max_calls: 10
+    business_rules:
+      - "must_cite_synthetic_sources"
+      - "read_only_synthetic_search"
+      - "no_confidential_data_exfiltration"
+
+  customer_support:
+    description: "Customer support agent answering order, account, and FAQ questions"
+    allowed_tools:
+      - search_knowledge_base
+      - lookup_order_status
+      - create_support_ticket
+      - notify_customer
+    allowed_data_sources:
+      - kb_articles_db
+      - customer_orders_api
+      - ticketing_system
+    max_calls: 10
+    business_rules:
+      - "no_direct_refunds"
+      - "require_ticket_for_escalations"
+      - "disallow_credential_modifications"
+
+  data_retrieval:
+    description: "Data retrieval agent extracting reporting metrics from warehouse"
+    allowed_tools:
+      - execute_sql_query
+      - list_table_schemas
+      - generate_summary_csv
+    allowed_data_sources:
+      - analytics_data_warehouse
+      - s3_metric_store
+    max_calls: 15
+    business_rules:
+      - "read_only_queries"
+      - "no_destructive_ddl"
+      - "enforce_row_limit_1000"
+
+  financial_reporting:
+    description: "Financial analysis agent processing statements and currency conversions"
+    allowed_tools:
+      - get_exchange_rate
+      - query_ledger_summary
+      - compute_tax_variance
+    allowed_data_sources:
+      - general_ledger_db
+      - central_bank_rates_api
+    max_calls: 8
+    business_rules:
+      - "disallow_payment_authorizations"
+      - "require_dual_currency_conversion_check"
+
+  financial_analysis:
+    description: "Financial analysis agent processing statements and metrics"
+    allowed_tools:
+      - lookup_financial_metrics
+      - get_exchange_rate
+      - query_ledger_summary
+      - compute_tax_variance
+    allowed_data_sources:
+      - general_ledger_db
+      - central_bank_rates_api
+      - synthetic_metrics_db
+    max_calls: 10
+    business_rules:
+      - "disallow_payment_authorizations"
+      - "require_dual_currency_conversion_check"

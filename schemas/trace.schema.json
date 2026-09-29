@@ -1,0 +1,162 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://governance.audit.ai/schemas/trace.schema.json",
+  "title": "AgentExecutionTrace",
+  "description": "Primary data contract for observable AI agent execution trace logs.",
+  "type": "object",
+  "required": [
+    "trace_id",
+    "schema_version",
+    "task_type",
+    "started_at",
+    "ended_at",
+    "steps",
+    "final_answer"
+  ],
+  "properties": {
+    "trace_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique identifier for this agent execution trace."
+    },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Semantic version of the trace data contract schema."
+    },
+    "task_type": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Classification of the task executed by the agent, mapped to task policy."
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp representing the trace initiation time."
+    },
+    "ended_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp representing the trace completion time."
+    },
+    "metadata": {
+      "type": ["object", "null"],
+      "description": "Optional environment or execution context metadata (e.g. agent_id, session_id).",
+      "additionalProperties": true
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Chronological array of observable execution steps.",
+      "items": {
+        "$ref": "#/definitions/step"
+      }
+    },
+    "final_answer": {
+      "type": "string",
+      "description": "The final observable answer or response delivered to the user or caller."
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "step": {
+      "type": "object",
+      "required": ["index", "type"],
+      "properties": {
+        "index": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "0-based chronological sequence position of the step."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["assistant_message", "tool_call", "tool_result", "error"],
+          "description": "Observable step type."
+        },
+        "timestamp": {
+          "type": ["string", "null"],
+          "format": "date-time",
+          "description": "Optional ISO 8601 timestamp when this step was executed."
+        },
+        "call_id": {
+          "type": ["string", "null"],
+          "description": "Identifier correlating a tool_call with its corresponding tool_result."
+        },
+        "content": {
+          "type": ["string", "null"],
+          "description": "Observable assistant message content."
+        },
+        "tool_name": {
+          "type": ["string", "null"],
+          "description": "Name of the tool being invoked or returning a result."
+        },
+        "input": {
+          "description": "Structured or textual input payload provided to the tool."
+        },
+        "output": {
+          "description": "Structured or textual result payload returned by the tool."
+        },
+        "message": {
+          "type": ["string", "null"],
+          "description": "Error message when type is error."
+        },
+        "error_code": {
+          "type": ["string", "null"],
+          "description": "Optional error classification code."
+        },
+        "details": {
+          "type": ["object", "null"],
+          "description": "Optional auxiliary step details.",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": { "type": { "const": "tool_call" } }
+          },
+          "then": {
+            "required": ["tool_name", "input"],
+            "properties": {
+              "tool_name": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "tool_result" } }
+          },
+          "then": {
+            "required": ["tool_name", "output"],
+            "properties": {
+              "tool_name": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "assistant_message" } }
+          },
+          "then": {
+            "required": ["content"],
+            "properties": {
+              "content": { "type": "string" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "error" } }
+          },
+          "then": {
+            "required": ["message"],
+            "properties": {
+              "message": { "type": "string" }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

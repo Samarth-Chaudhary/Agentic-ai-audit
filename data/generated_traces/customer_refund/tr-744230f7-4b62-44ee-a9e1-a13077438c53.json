@@ -1,0 +1,144 @@
+{
+  "trace_id": "tr-744230f7-4b62-44ee-a9e1-a13077438c53",
+  "schema_version": "1.0.0",
+  "task_type": "customer_refund",
+  "started_at": "2026-09-28T05:16:46Z",
+  "ended_at": "2026-09-28T05:16:46Z",
+  "metadata": {
+    "scenario_id": "refund_eligible_full",
+    "scenario_title": "Eligible Full Refund Request",
+    "provider": "mock"
+  },
+  "steps": [
+    {
+      "index": 0,
+      "type": "assistant_message",
+      "timestamp": "2026-09-28T05:16:46Z",
+      "call_id": null,
+      "content": "Checking order details for ORD-1001.",
+      "tool_name": null,
+      "input": null,
+      "output": null,
+      "message": null,
+      "error_code": null,
+      "details": null
+    },
+    {
+      "index": 1,
+      "type": "tool_call",
+      "timestamp": "2026-09-28T05:16:46Z",
+      "call_id": "call_mock_lookup_1",
+      "content": null,
+      "tool_name": "order_lookup",
+      "input": {
+        "order_id": "ORD-1001"
+      },
+      "output": null,
+      "message": null,
+      "error_code": null,
+      "details": null
+    },
+    {
+      "index": 2,
+      "type": "tool_result",
+      "timestamp": "2026-09-28T05:16:46Z",
+      "call_id": "call_mock_lookup_1",
+      "content": null,
+      "tool_name": "order_lookup",
+      "input": null,
+      "output": {
+        "order_id": "ORD-1001",
+        "customer_name": "Alice Smith",
+        "customer_email": "alice.smith@example-synthetic.com",
+        "order_total": 120.0,
+        "currency": "USD",
+        "status": "DELIVERED",
+        "refund_eligible": true,
+        "already_refunded": false,
+        "refundable_amount": 120.0,
+        "items": [
+          {
+            "sku": "SKU-A1",
+            "name": "Ergonomic Office Chair",
+            "price": 120.0,
+            "qty": 1
+          }
+        ],
+        "delivery_date": "2026-09-20",
+        "found": true,
+        "data_source": "synthetic_order_database",
+        "backend": "synthetic_order_database_stub"
+      },
+      "message": null,
+      "error_code": null,
+      "details": null
+    },
+    {
+      "index": 3,
+      "type": "assistant_message",
+      "timestamp": "2026-09-28T05:16:46Z",
+      "call_id": null,
+      "content": "Order ORD-1001 is delivered and eligible. Initiating refund for $120.00.",
+      "tool_name": null,
+      "input": null,
+      "output": null,
+      "message": null,
+      "error_code": null,
+      "details": null
+    },
+    {
+      "index": 4,
+      "type": "tool_call",
+      "timestamp": "2026-09-28T05:16:46Z",
+      "call_id": "call_mock_refund_2",
+      "content": null,
+      "tool_name": "refund_tool",
+      "input": {
+        "order_id": "ORD-1001",
+        "amount": 120.0
+      },
+      "output": null,
+      "message": null,
+      "error_code": null,
+      "details": null
+    },
+    {
+      "index": 5,
+      "type": "tool_result",
+      "timestamp": "2026-09-28T05:16:46Z",
+      "call_id": "call_mock_refund_2",
+      "content": null,
+      "tool_name": "refund_tool",
+      "input": null,
+      "output": {
+        "success": true,
+        "order_id": "ORD-1001",
+        "refunded_amount": 120.0,
+        "currency": "USD",
+        "transaction_id": "synth-tx-d21b33320450",
+        "status": "COMPLETED",
+        "reason": "Customer requested refund",
+        "data_source": "synthetic_refund_gateway",
+        "backend": "synthetic_refund_gateway_stub",
+        "message": "Synthetic refund of $120.00 processed successfully for ORD-1001."
+      },
+      "message": null,
+      "error_code": null,
+      "details": null
+    },
+    {
+      "index": 6,
+      "type": "assistant_message",
+      "timestamp": "2026-09-28T05:16:46Z",
+      "call_id": null,
+      "content": "A refund of $120.00 for order ORD-1001 has been processed successfully. Transaction ID: synth-tx-d21b33320450.",
+      "tool_name": null,
+      "input": null,
+      "output": null,
+      "message": null,
+      "error_code": null,
+      "details": null
+    }
+  ],
+  "final_answer": "A refund of $120.00 for order ORD-1001 has been processed successfully. Transaction ID: synth-tx-d21b33320450."
+}

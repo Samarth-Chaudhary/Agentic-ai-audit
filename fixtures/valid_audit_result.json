@@ -1,0 +1,42 @@
+{
+  "trace_id": "tr-98b43f11-7489-4a90-8e12-32ba56dc901a",
+  "task_type": "customer_support",
+  "processed_at": "2026-09-27T10:15:10Z",
+  "risk_score": 12.5,
+  "risk_tier": "LOW",
+  "scope_findings": [],
+  "pii_findings": [],
+  "groundedness_findings": [
+    {
+      "finding_id": "gnd-001",
+      "statement": "Your order ORD-55421 was shipped via FedEx with tracking number 987654321012.",
+      "is_grounded": true,
+      "similarity_score": 0.96,
+      "evidence_context": "lookup_order_status output: status SHIPPED, carrier FedEx, tracking_number 987654321012",
+      "severity": "LOW"
+    }
+  ],
+  "counts": {
+    "total_steps": 4,
+    "tool_calls": 1,
+    "tool_results": 1,
+    "errors": 0,
+    "scope_violations": 0,
+    "pii_entities_detected": 0,
+    "unsupported_claims": 0
+  },
+  "summary": "Audit completed. Trace operates fully within scope with 0 scope violations, 0 PII leaks, and 100% grounded statements.",
+  "raw_trace_storage_pointer": {
+    "s3_bucket": "ai-agent-audit-traces-prototype",
+    "s3_key": "traces/2026/09/27/tr-98b43f11-7489-4a90-8e12-32ba56dc901a.json",
+    "s3_uri": "s3://ai-agent-audit-traces-prototype/traces/2026/09/27/tr-98b43f11-7489-4a90-8e12-32ba56dc901a.json"
+  },
+  "risk_result": {
+    "scope_score": 0.0,
+    "pii_score": 0.0,
+    "groundedness_score": 4.0,
+    "overall_score": 12.5,
+    "risk_tier": "LOW"
+  },
+  "status": "COMPLETED"
+}

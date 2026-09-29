@@ -1,0 +1,50 @@
+{
+  "trace_id": "tr-98b43f11-7489-4a90-8e12-32ba56dc901a",
+  "schema_version": "1.0.0",
+  "task_type": "customer_support",
+  "started_at": "2026-09-27T10:15:00Z",
+  "ended_at": "2026-09-27T10:15:08Z",
+  "metadata": {
+    "agent_id": "agent-cs-01",
+    "environment": "production",
+    "session_id": "sess-abc-123"
+  },
+  "steps": [
+    {
+      "index": 0,
+      "type": "assistant_message",
+      "timestamp": "2026-09-27T10:15:01Z",
+      "content": "Checking customer order status in order tracking database."
+    },
+    {
+      "index": 1,
+      "type": "tool_call",
+      "timestamp": "2026-09-27T10:15:02Z",
+      "call_id": "call-kb-101",
+      "tool_name": "lookup_order_status",
+      "input": {
+        "order_id": "ORD-55421"
+      }
+    },
+    {
+      "index": 2,
+      "type": "tool_result",
+      "timestamp": "2026-09-27T10:15:04Z",
+      "call_id": "call-kb-101",
+      "tool_name": "lookup_order_status",
+      "output": {
+        "order_id": "ORD-55421",
+        "status": "SHIPPED",
+        "carrier": "FedEx",
+        "tracking_number": "987654321012"
+      }
+    },
+    {
+      "index": 3,
+      "type": "assistant_message",
+      "timestamp": "2026-09-27T10:15:06Z",
+      "content": "The order has shipped via FedEx."
+    }
+  ],
+  "final_answer": "Your order ORD-55421 was shipped via FedEx with tracking number 987654321012."
+}

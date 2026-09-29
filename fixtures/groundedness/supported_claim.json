@@ -1,0 +1,39 @@
+{
+  "trace_id": "tr-groundedness-supported-001",
+  "schema_version": "1.0.0",
+  "task_type": "financial_analysis",
+  "started_at": "2026-09-27T10:00:00Z",
+  "ended_at": "2026-09-27T10:00:05Z",
+  "metadata": {
+    "agent_id": "financial-analyst-agent",
+    "test_scenario": "grounded_claim_verification"
+  },
+  "steps": [
+    {
+      "index": 0,
+      "type": "tool_call",
+      "call_id": "call-fin-101",
+      "tool_name": "lookup_financial_metrics",
+      "input": {
+        "metric": "revenue",
+        "period": "FY2025"
+      }
+    },
+    {
+      "index": 1,
+      "type": "tool_result",
+      "call_id": "call-fin-101",
+      "tool_name": "lookup_financial_metrics",
+      "output": {
+        "report_id": "REP-2025",
+        "metric": "revenue",
+        "value": "$12 million",
+        "text": "Revenue was $12 million."
+      },
+      "details": {
+        "data_source": "tool:financial_database"
+      }
+    }
+  ],
+  "final_answer": "Revenue was $12 million."
+}

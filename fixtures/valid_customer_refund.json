@@ -1,0 +1,89 @@
+{
+  "trace_id": "tr-valid-refund-001",
+  "schema_version": "1.0.0",
+  "task_type": "customer_refund",
+  "started_at": "2026-09-27T16:10:00Z",
+  "ended_at": "2026-09-27T16:10:07Z",
+  "metadata": {
+    "scenario_id": "valid_customer_refund_demo",
+    "description": "Compliant customer refund adhering strictly to all policies"
+  },
+  "steps": [
+    {
+      "index": 0,
+      "type": "assistant_message",
+      "timestamp": "2026-09-27T16:10:01Z",
+      "content": "Looking up customer order details for ORD-1001."
+    },
+    {
+      "index": 1,
+      "type": "tool_call",
+      "timestamp": "2026-09-27T16:10:02Z",
+      "call_id": "call-v1",
+      "tool_name": "order_lookup",
+      "input": {
+        "order_id": "ORD-1001"
+      }
+    },
+    {
+      "index": 2,
+      "type": "tool_result",
+      "timestamp": "2026-09-27T16:10:03Z",
+      "call_id": "call-v1",
+      "tool_name": "order_lookup",
+      "output": {
+        "order_id": "ORD-1001",
+        "customer_name": "Alice Smith",
+        "customer_email": "alice.smith@example-synthetic.com",
+        "order_total": 120.0,
+        "currency": "USD",
+        "status": "DELIVERED",
+        "refund_eligible": true,
+        "already_refunded": false,
+        "refundable_amount": 120.0,
+        "found": true,
+        "data_source": "synthetic_order_database"
+      }
+    },
+    {
+      "index": 3,
+      "type": "assistant_message",
+      "timestamp": "2026-09-27T16:10:04Z",
+      "content": "Order ORD-1001 is eligible for refund. Initiating refund of $120.00."
+    },
+    {
+      "index": 4,
+      "type": "tool_call",
+      "timestamp": "2026-09-27T16:10:05Z",
+      "call_id": "call-v2",
+      "tool_name": "refund_tool",
+      "input": {
+        "order_id": "ORD-1001",
+        "amount": 120.0
+      }
+    },
+    {
+      "index": 5,
+      "type": "tool_result",
+      "timestamp": "2026-09-27T16:10:06Z",
+      "call_id": "call-v2",
+      "tool_name": "refund_tool",
+      "output": {
+        "success": true,
+        "order_id": "ORD-1001",
+        "refunded_amount": 120.0,
+        "currency": "USD",
+        "transaction_id": "synth-tx-77a8b99c01",
+        "status": "COMPLETED",
+        "data_source": "synthetic_refund_gateway"
+      }
+    },
+    {
+      "index": 6,
+      "type": "assistant_message",
+      "timestamp": "2026-09-27T16:10:07Z",
+      "content": "Refund of $120.00 for order ORD-1001 completed successfully under transaction synth-tx-77a8b99c01."
+    }
+  ],
+  "final_answer": "Your refund of $120.00 for order ORD-1001 was processed successfully. Transaction ID: synth-tx-77a8b99c01."
+}

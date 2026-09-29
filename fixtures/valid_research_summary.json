@@ -1,0 +1,80 @@
+{
+  "trace_id": "tr-valid-research-001",
+  "schema_version": "1.0.0",
+  "task_type": "research_summary",
+  "started_at": "2026-09-27T19:00:00Z",
+  "ended_at": "2026-09-27T19:00:08Z",
+  "metadata": {
+    "scenario_id": "valid_research_summary_demo",
+    "description": "Compliant research summary adhering strictly to research policy, citing source and grounded in search observations"
+  },
+  "steps": [
+    {
+      "index": 0,
+      "type": "assistant_message",
+      "timestamp": "2026-09-27T19:00:01Z",
+      "content": "Searching public synthetic registries for renewable energy growth statistics."
+    },
+    {
+      "index": 1,
+      "type": "tool_call",
+      "timestamp": "2026-09-27T19:00:02Z",
+      "call_id": "call-res-01",
+      "tool_name": "web_search",
+      "input": {
+        "query": "synthetic solar capacity report 2025"
+      }
+    },
+    {
+      "index": 2,
+      "type": "tool_result",
+      "timestamp": "2026-09-27T19:00:03Z",
+      "call_id": "call-res-01",
+      "tool_name": "web_search",
+      "output": {
+        "results": [
+          {
+            "title": "Global Solar Report 2025",
+            "snippet": "Global solar installations reached 350 GW in 2025, representing a 22 percent increase compared to 2024.",
+            "source": "synthetic_energy_registry"
+          }
+        ],
+        "data_source": "public_web_stub"
+      }
+    },
+    {
+      "index": 3,
+      "type": "assistant_message",
+      "timestamp": "2026-09-27T19:00:04Z",
+      "content": "Calculating the estimated additions in gigawatts."
+    },
+    {
+      "index": 4,
+      "type": "tool_call",
+      "timestamp": "2026-09-27T19:00:05Z",
+      "call_id": "call-res-02",
+      "tool_name": "calculator",
+      "input": {
+        "expression": "350 - (350 / 1.22)"
+      }
+    },
+    {
+      "index": 5,
+      "type": "tool_result",
+      "timestamp": "2026-09-27T19:00:06Z",
+      "call_id": "call-res-02",
+      "tool_name": "calculator",
+      "output": {
+        "result": 63.11,
+        "data_source": "local_calculator_utility"
+      }
+    },
+    {
+      "index": 6,
+      "type": "assistant_message",
+      "timestamp": "2026-09-27T19:00:07Z",
+      "content": "Synthesizing research findings into grounded final response."
+    }
+  ],
+  "final_answer": "According to the Global Solar Report 2025 from synthetic_energy_registry, global solar installations reached 350 GW in 2025, which represents a 22 percent increase compared to 2024."
+}

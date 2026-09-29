@@ -1,0 +1,52 @@
+{
+  "trace_id": "tr-bad-contradiction-001",
+  "schema_version": "1.0.0",
+  "task_type": "customer_refund",
+  "started_at": "2026-09-27T18:00:00Z",
+  "ended_at": "2026-09-27T18:00:05Z",
+  "metadata": {
+    "scenario_id": "bad_contradicted_final_answer",
+    "description": "Trace where final answer asserts refund approval directly contradicting tool result indicating return rejection"
+  },
+  "steps": [
+    {
+      "index": 0,
+      "type": "assistant_message",
+      "timestamp": "2026-09-27T18:00:01Z",
+      "content": "Looking up status for order ORD-9901."
+    },
+    {
+      "index": 1,
+      "type": "tool_call",
+      "timestamp": "2026-09-27T18:00:02Z",
+      "call_id": "call-contra-01",
+      "tool_name": "order_lookup",
+      "input": {
+        "order_id": "ORD-9901"
+      }
+    },
+    {
+      "index": 2,
+      "type": "tool_result",
+      "timestamp": "2026-09-27T18:00:03Z",
+      "call_id": "call-contra-01",
+      "tool_name": "order_lookup",
+      "output": {
+        "order_id": "ORD-9901",
+        "customer_name": "Bob Vance",
+        "order_total": 85.0,
+        "status": "RETURN_REJECTED",
+        "refund_eligible": false,
+        "rejection_reason": "Item was damaged and returned past 30-day policy window.",
+        "data_source": "synthetic_order_database"
+      }
+    },
+    {
+      "index": 3,
+      "type": "assistant_message",
+      "timestamp": "2026-09-27T18:00:04Z",
+      "content": "Completed review of order status."
+    }
+  ],
+  "final_answer": "Your order ORD-9901 return was accepted and your refund of $85.00 has been fully approved."
+}

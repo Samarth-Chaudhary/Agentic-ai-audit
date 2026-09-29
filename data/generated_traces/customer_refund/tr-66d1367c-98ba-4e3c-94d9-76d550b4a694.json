@@ -1,0 +1,91 @@
+{
+  "trace_id": "tr-66d1367c-98ba-4e3c-94d9-76d550b4a694",
+  "schema_version": "1.0.0",
+  "task_type": "customer_refund",
+  "started_at": "2026-09-27T15:15:42Z",
+  "ended_at": "2026-09-27T15:15:42Z",
+  "metadata": {
+    "scenario_id": "refund_ineligible_in_transit",
+    "scenario_title": "In-Transit Order Refund Request",
+    "provider": "mock"
+  },
+  "steps": [
+    {
+      "index": 0,
+      "type": "assistant_message",
+      "timestamp": "2026-09-27T15:15:42Z",
+      "call_id": null,
+      "content": "Checking order details for ORD-1002.",
+      "tool_name": null,
+      "input": null,
+      "output": null,
+      "message": null,
+      "error_code": null,
+      "details": null
+    },
+    {
+      "index": 1,
+      "type": "tool_call",
+      "timestamp": "2026-09-27T15:15:42Z",
+      "call_id": "call_mock_lookup_1",
+      "content": null,
+      "tool_name": "order_lookup",
+      "input": {
+        "order_id": "ORD-1002"
+      },
+      "output": null,
+      "message": null,
+      "error_code": null,
+      "details": null
+    },
+    {
+      "index": 2,
+      "type": "tool_result",
+      "timestamp": "2026-09-27T15:15:42Z",
+      "call_id": "call_mock_lookup_1",
+      "content": null,
+      "tool_name": "order_lookup",
+      "input": null,
+      "output": {
+        "order_id": "ORD-1002",
+        "customer_name": "Bob Jones",
+        "customer_email": "bob.jones@example-synthetic.com",
+        "order_total": 45.5,
+        "currency": "USD",
+        "status": "SHIPPED",
+        "refund_eligible": false,
+        "already_refunded": false,
+        "refundable_amount": 0.0,
+        "items": [
+          {
+            "sku": "SKU-B2",
+            "name": "Wireless Mechanical Keyboard",
+            "price": 45.5,
+            "qty": 1
+          }
+        ],
+        "notes": "Item in transit. Refunds only permitted after physical delivery.",
+        "found": true,
+        "data_source": "synthetic_order_database",
+        "backend": "synthetic_order_database_stub"
+      },
+      "message": null,
+      "error_code": null,
+      "details": null
+    },
+    {
+      "index": 3,
+      "type": "assistant_message",
+      "timestamp": "2026-09-27T15:15:42Z",
+      "call_id": null,
+      "content": "Order ORD-1002 has status SHIPPED and is currently ineligible for a refund. Refunds can only be processed after delivery.",
+      "tool_name": null,
+      "input": null,
+      "output": null,
+      "message": null,
+      "error_code": null,
+      "details": null
+    }
+  ],
+  "final_answer": "Order ORD-1002 has status SHIPPED and is currently ineligible for a refund. Refunds can only be processed after delivery."
+}
