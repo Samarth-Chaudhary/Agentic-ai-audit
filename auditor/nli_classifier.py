@@ -139,13 +139,29 @@ def heuristic_nli_classify(premise: str, hypothesis: str) -> NLIVerdict:
             return NLIVerdict.CONTRADICTION
 
     # 2. Check for numeric disagreement on shared topic
-    p_numbers = re.findall(r"\b\d+(?:\.\d+)?\b", p_lower)
-    h_numbers = re.findall(r"\b\d+(?:\.\d+)?\b", h_lower)
-    shared_tokens = (p_tokens & h_tokens) - {"was", "is", "the", "a", "an", "and", "or", "to", "in", "of", "revenue", "dollar", "dollars"}
+    def _extract_floats(text: str) -> list[float]:
+        matches = re.findall(r"\b\d+(?:\.\d+)?\b", text)
+        res = []
+        for m in matches:
+            try:
+                res.append(float(m))
+            except ValueError:
+                pass
+        return res
 
-    if p_numbers and h_numbers and set(p_numbers) != set(h_numbers) and len(shared_tokens) >= 1:
-        # If numbers differ for the same entity context
-        return NLIVerdict.CONTRADICTION
+    p_floats = _extract_floats(p_lower)
+    h_floats = _extract_floats(h_lower)
+    shared_tokens = (p_tokens & h_tokens) - {
+        "was", "is", "the", "a", "an", "and", "or", "to", "in", "of",
+        "for", "with", "by", "under", "revenue", "dollar", "dollars", "usd"
+    }
+
+    if p_floats and h_floats and len(shared_tokens) >= 1:
+        p_num_set = set(p_floats)
+        h_num_set = set(h_floats)
+        # Contradiction: hypothesis asserts a number on a shared topic that does not match premise numbers
+        if not h_num_set.issubset(p_num_set):
+            return NLIVerdict.CONTRADICTION
 
     # 3. Check for negation flip
     negations = {"not", "never", "no", "cannot", "neither"}
@@ -160,9 +176,15 @@ def heuristic_nli_classify(premise: str, hypothesis: str) -> NLIVerdict:
         return NLIVerdict.NEUTRAL
 
     # 5. Overlap ratio for entailment
-    if h_tokens.issubset(p_tokens) or (len(p_tokens & h_tokens) / max(1, len(h_tokens)) >= 0.75):
-        # Shared core facts with no contradiction
-        if not p_numbers or set(h_numbers).issubset(set(p_numbers)):
+    stop_words = {"was", "is", "the", "a", "an", "and", "or", "to", "in", "of", "for", "with", "by", "under", "your"}
+    h_content_tokens = h_tokens - stop_words
+    p_content_tokens = p_tokens - stop_words
+
+    content_overlap = (len(p_content_tokens & h_content_tokens) / max(1, len(h_content_tokens))) if h_content_tokens else 0.0
+
+    if h_tokens.issubset(p_tokens) or content_overlap >= 0.55:
+        # Shared core facts with no contradiction and all hypothesis numbers confirmed
+        if not h_floats or set(h_floats).issubset(set(p_floats)):
             return NLIVerdict.ENTAILMENT
 
     return NLIVerdict.NEUTRAL
@@ -176,43 +198,65 @@ class TransformerNLIClassifier(BaseNLIClassifier):
     def __init__(self, model_name: str | None = None, allow_remote_download: bool = False) -> None:
         self.model_name = model_name or os.environ.get("NLI_MODEL_NAME", "cross-encoder/nli-deberta-v3-small")
         self.allow_remote_download = allow_remote_download or (os.environ.get("NLI_ALLOW_DOWNLOAD", "0") == "1")
-        self._pipeline = None
+        self._cross_encoder = None
         self._init_failed = False
+        self.engine_name = "heuristic:semantic-rule-engine-v1"
+        self.is_degraded = True
+        self.degraded_reason: str | None = None
 
-    def _get_pipeline(self) -> Any | None:
+    def _get_cross_encoder(self) -> Any | None:
         if self._init_failed:
             return None
         if self.model_name in ("heuristic", "offline", "local"):
+            self.engine_name = "heuristic:semantic-rule-engine-v1"
+            self.is_degraded = True
+            self.degraded_reason = "Heuristic engine requested by configuration"
             return None
         if self.model_name in self._model_cache:
+            self.engine_name = f"transformer-cross-encoder:{self.model_name}"
+            self.is_degraded = False
+            self.degraded_reason = None
             return self._model_cache[self.model_name]
 
         try:
-            from transformers import pipeline
-            model_kwargs = {}
-            if not self.allow_remote_download:
-                model_kwargs["local_files_only"] = True
-            pipe = pipeline("text-classification", model=self.model_name, model_kwargs=model_kwargs)
-            self._model_cache[self.model_name] = pipe
-            return pipe
-        except Exception:
-            logger.info(f"Transformer NLI not cached locally; using fast heuristic NLI engine: {self.model_name}")
+            from sentence_transformers import CrossEncoder
+            try:
+                encoder = CrossEncoder(self.model_name, local_files_only=True)
+            except Exception:
+                encoder = CrossEncoder(self.model_name)
+            self._model_cache[self.model_name] = encoder
+            self.engine_name = f"transformer-cross-encoder:{self.model_name}"
+            self.is_degraded = False
+            self.degraded_reason = None
+            return encoder
+        except Exception as e:
+            logger.info("Transformer NLI unavailable; falling back to heuristic engine (%s): %s", self.model_name, e)
             self._init_failed = True
+            self.engine_name = "heuristic:semantic-rule-engine-v1"
+            self.is_degraded = True
+            self.degraded_reason = f"CrossEncoder model '{self.model_name}' could not be loaded: {e!s}"
             return None
 
     def classify(self, premise: str, hypothesis: str) -> NLIVerdict:
-        pipe = self._get_pipeline()
-        if pipe is not None:
+        encoder = self._get_cross_encoder()
+        if encoder is not None:
             try:
-                result = pipe({"text": premise, "text_pair": hypothesis})
-                label = result["label"].upper() if isinstance(result, dict) else result[0]["label"].upper()
-                if "ENTAIL" in label:
+                import numpy as np
+                scores = encoder.predict([(premise, hypothesis)])[0]
+                probs = np.exp(scores) / np.sum(np.exp(scores))
+                # CrossEncoder nli-deberta-v3-small labels:
+                # 0: contradiction, 1: entailment, 2: neutral
+                p_contra = float(probs[0])
+                p_entail = float(probs[1])
+                p_neut = float(probs[2])
+
+                if p_entail > 0.50 or (p_entail > p_contra and p_entail > p_neut and p_contra < 0.20):
                     return NLIVerdict.ENTAILMENT
-                elif "CONTRAD" in label:
+                elif p_contra > 0.50 or (p_contra > p_entail and p_contra > p_neut):
                     return NLIVerdict.CONTRADICTION
                 else:
                     return NLIVerdict.NEUTRAL
             except Exception as e:
-                logger.warning(f"Inference failure on NLI model; using heuristic fallback: {e}")
+                logger.warning("Inference failure on CrossEncoder NLI; using heuristic fallback: %s", e)
 
         return heuristic_nli_classify(premise, hypothesis)

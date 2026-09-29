@@ -51,7 +51,6 @@ from auditor.nli_classifier import (
     BaseNLIClassifier,
     NLIVerdict,
     TransformerNLIClassifier,
-    map_nli_to_audit_verdict,
 )
 from auditor.policy_loader import PolicyLoader, RiskConfig
 from project.logging import get_logger
@@ -71,6 +70,10 @@ class GroundednessAuditResult(BaseModel):
     unsupported_claims: int = Field(default=0, ge=0, description="Count of unsupported claims")
     groundedness_score: float = Field(default=100.0, ge=0.0, le=100.0, description="Percentage of claims grounded")
     summary: str = Field(description="Narrative audit interpretation")
+    nli_engine: str = Field(default="", description="Concrete NLI model identifier and version")
+    embedding_engine: str = Field(default="", description="Concrete embedding model identifier and version")
+    is_degraded: bool = Field(default=False, description="Whether audit ran with degraded heuristic models")
+    degraded_reasons: list[str] = Field(default_factory=list, description="Reasons for degraded execution")
 
 
 class GroundednessDetector:
@@ -86,6 +89,7 @@ class GroundednessDetector:
         embedding_model_name: str | None = None,
         nli_classifier: BaseNLIClassifier | None = None,
     ) -> None:
+        self.risk_config: RiskConfig | None
         if risk_config is None:
             try:
                 loader = PolicyLoader()
@@ -117,6 +121,41 @@ class GroundednessDetector:
         self._embedder = None
         self._embedder_failed = False
 
+    @property
+    def embedding_engine_name(self) -> str:
+        """Concrete identifier and version for the active embedding model."""
+        embedder = self._get_embedder()
+        if embedder is not None:
+            return f"sentence-transformers/{self.embedding_model_name}"
+        return "heuristic:lexical-jaccard-fallback"
+
+    @property
+    def nli_engine_name(self) -> str:
+        """Concrete identifier and version for the active NLI model."""
+        if hasattr(self.nli_classifier, "engine_name"):
+            return str(self.nli_classifier.engine_name)
+        return type(self.nli_classifier).__name__
+
+    @property
+    def is_degraded(self) -> bool:
+        """True if either the embedding model or NLI model is operating in degraded mode."""
+        degraded_nli = getattr(self.nli_classifier, "is_degraded", False)
+        degraded_emb = (self._get_embedder() is None)
+        return bool(degraded_nli or degraded_emb)
+
+    def get_degraded_reasons(self) -> list[str]:
+        """Collect explicit explanations when operating in degraded fallback mode."""
+        reasons: list[str] = []
+        if self._get_embedder() is None:
+            reasons.append(f"Embedding model '{self.embedding_model_name}' unavailable; using lexical similarity fallback")
+        if getattr(self.nli_classifier, "is_degraded", False):
+            raw_reason = getattr(self.nli_classifier, "degraded_reason", None)
+            if isinstance(raw_reason, str) and raw_reason:
+                reasons.append(raw_reason)
+            else:
+                reasons.append("NLI model unavailable; using heuristic rule classifier")
+        return reasons
+
     def _get_embedder(self) -> Any | None:
         """Lazy-load and cache the embedding model instance."""
         if self._embedder_failed:
@@ -127,7 +166,10 @@ class GroundednessDetector:
         try:
             from sentence_transformers import SentenceTransformer
             logger.info(f"Loading sentence-transformers model: {self.embedding_model_name}")
-            embedder = SentenceTransformer(self.embedding_model_name)
+            try:
+                embedder = SentenceTransformer(self.embedding_model_name, local_files_only=True)
+            except Exception:
+                embedder = SentenceTransformer(self.embedding_model_name)
             self._embedder_cache[self.embedding_model_name] = embedder
             return embedder
         except Exception as e:
@@ -192,6 +234,10 @@ class GroundednessDetector:
                 unsupported_claims=0,
                 groundedness_score=100.0,
                 summary="No verifiable factual claims detected in the final answer.",
+                nli_engine=self.nli_engine_name,
+                embedding_engine=self.embedding_engine_name,
+                is_degraded=self.is_degraded,
+                degraded_reasons=self.get_degraded_reasons(),
             )
 
         if not evidence_pool:
@@ -207,6 +253,7 @@ class GroundednessDetector:
                     audit_verdict=AuditVerdict.UNSUPPORTED.value,
                     is_grounded=False,
                     severity=RiskTier.HIGH,
+                    engine=self.nli_engine_name,
                 )
                 findings.append(finding)
 
@@ -221,53 +268,118 @@ class GroundednessDetector:
                 unsupported_claims=len(claims),
                 groundedness_score=0.0,
                 summary=f"Trace contains {len(claims)} claim(s) but 0 tool result evidence items.",
+                nli_engine=self.nli_engine_name,
+                embedding_engine=self.embedding_engine_name,
+                is_degraded=self.is_degraded,
+                degraded_reasons=self.get_degraded_reasons(),
             )
 
-        # Steps 3, 4, 5: Embedding Retrieval, Best Evidence Selection, and NLI
+        # Steps 3, 4, 5: Full-Evidence Search Across Every Tool Result in Trace
+        # Grounding Requirement:
+        # A claim is supported if ANY tool result in the trace substantiates it.
+        # Evidence search must check every tool result in the trace, not only the nearest
+        # one by index or order, preventing false negatives where relevant evidence
+        # resides in downstream or non-adjacent tool executions.
         for claim in claims:
             similarities = self._compute_similarities(claim, evidence_pool)
-            best_idx = max(range(len(similarities)), key=lambda i: similarities[i])
-            best_sim = float(similarities[best_idx])
-            best_evidence = evidence_pool[best_idx]
 
-            has_sufficient_evidence = (best_sim >= self.similarity_threshold)
+            # 1. Candidates meeting similarity threshold, ordered by similarity descending
+            threshold_candidates = [
+                (ev, sim) for ev, sim in zip(evidence_pool, similarities, strict=False)
+                if sim >= self.similarity_threshold
+            ]
+            threshold_candidates.sort(key=lambda x: x[1], reverse=True)
 
-            if not has_sufficient_evidence:
-                nli_verdict = NLIVerdict.NEUTRAL
-                audit_verdict = AuditVerdict.UNSUPPORTED
-                snippet = f"Closest evidence failed similarity threshold (sim={best_sim:.2f}): {best_evidence.text}"
-                severity = RiskTier.HIGH
-                is_grounded = False
-            else:
+            # 2. To ensure EVERY tool result in the trace is checked, collect the best candidate
+            # from each distinct tool execution step
+            tool_candidates: list[tuple[Evidence, float]] = []
+            seen_steps: set[int] = set()
+            for ev, _sim in zip(evidence_pool, similarities, strict=False):
+                if ev.step_index not in seen_steps:
+                    step_items = [
+                        (e, s) for e, s in zip(evidence_pool, similarities, strict=False)
+                        if e.step_index == ev.step_index
+                    ]
+                    best_step_item = max(step_items, key=lambda x: x[1])
+                    tool_candidates.append(best_step_item)
+                    seen_steps.add(ev.step_index)
+
+            # Combine and deduplicate candidates, keeping highest similarity order
+            candidate_pool: list[tuple[Evidence, float]] = []
+            seen_ev_texts: set[str] = set()
+            for ev, sim in threshold_candidates + tool_candidates:
+                if ev.text not in seen_ev_texts:
+                    candidate_pool.append((ev, sim))
+                    seen_ev_texts.add(ev.text)
+            candidate_pool.sort(key=lambda x: x[1], reverse=True)
+
+            supported_candidate: tuple[Evidence, float, NLIVerdict] | None = None
+            contradicted_candidates: list[tuple[Evidence, float, NLIVerdict]] = []
+            neutral_candidates: list[tuple[Evidence, float, NLIVerdict]] = []
+
+            for ev, sim in candidate_pool:
+                if sim < self.similarity_threshold:
+                    continue
                 try:
                     nli_verdict = self.nli_classifier.classify(
-                        premise=best_evidence.text,
+                        premise=ev.text,
                         hypothesis=claim,
                     )
                 except Exception as exc:
                     logger.warning("NLI classification failed due to provider/model error: %s", exc)
                     nli_verdict = NLIVerdict.NEUTRAL
-                audit_verdict = map_nli_to_audit_verdict(nli_verdict, has_sufficient_evidence=True)
-                snippet = best_evidence.text
-                is_grounded = (audit_verdict == AuditVerdict.SUPPORTED)
 
-                if audit_verdict == AuditVerdict.CONTRADICTED:
-                    severity = RiskTier.CRITICAL
-                elif audit_verdict == AuditVerdict.UNSUPPORTED:
-                    severity = RiskTier.HIGH
+                if nli_verdict == NLIVerdict.ENTAILMENT:
+                    supported_candidate = (ev, sim, nli_verdict)
+                    break  # Found supporting evidence across tool results!
+                elif nli_verdict == NLIVerdict.CONTRADICTION:
+                    contradicted_candidates.append((ev, sim, nli_verdict))
                 else:
-                    severity = RiskTier.LOW
+                    neutral_candidates.append((ev, sim, nli_verdict))
+
+            if supported_candidate is not None:
+                best_ev, best_sim, nli_v = supported_candidate
+                audit_verdict = AuditVerdict.SUPPORTED
+                is_grounded = True
+                severity = RiskTier.LOW
+                snippet = best_ev.text
+                ev_step = best_ev.step_index
+                ev_tool = best_ev.tool_name
+            elif contradicted_candidates:
+                best_ev, best_sim, nli_v = max(contradicted_candidates, key=lambda x: x[1])
+                audit_verdict = AuditVerdict.CONTRADICTED
+                is_grounded = False
+                severity = RiskTier.CRITICAL
+                snippet = best_ev.text
+                ev_step = best_ev.step_index
+                ev_tool = best_ev.tool_name
+            else:
+                # Fall back to reporting the overall closest evidence across the entire pool
+                best_idx = max(range(len(similarities)), key=lambda i: similarities[i])
+                best_sim = float(similarities[best_idx])
+                best_ev = evidence_pool[best_idx]
+                nli_v = NLIVerdict.NEUTRAL
+                audit_verdict = AuditVerdict.UNSUPPORTED
+                is_grounded = False
+                severity = RiskTier.HIGH
+                ev_step = best_ev.step_index
+                ev_tool = best_ev.tool_name
+                if best_sim < self.similarity_threshold:
+                    snippet = f"Closest evidence failed similarity threshold (sim={best_sim:.2f}): {best_ev.text}"
+                else:
+                    snippet = f"Evidence did not substantiate claim (NLI neutral, sim={best_sim:.2f}): {best_ev.text}"
 
             finding = GroundednessFinding(
                 claim=claim,
                 evidence_snippet=snippet,
-                evidence_step_index=best_evidence.step_index,
-                tool_name=best_evidence.tool_name,
+                evidence_step_index=ev_step,
+                tool_name=ev_tool,
                 similarity=round(best_sim, 4),
-                nli_verdict=nli_verdict.value,
+                nli_verdict=nli_v.value,
                 audit_verdict=audit_verdict.value,
                 is_grounded=is_grounded,
                 severity=severity,
+                engine=self.nli_engine_name,
             )
             findings.append(finding)
 
@@ -296,4 +408,8 @@ class GroundednessDetector:
             unsupported_claims=unsupported_count,
             groundedness_score=score,
             summary=summary,
+            nli_engine=self.nli_engine_name,
+            embedding_engine=self.embedding_engine_name,
+            is_degraded=self.is_degraded,
+            degraded_reasons=self.get_degraded_reasons(),
         )
