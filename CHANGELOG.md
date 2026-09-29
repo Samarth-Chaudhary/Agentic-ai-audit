@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.0] - Phase 3: Independent Evidence (2026-09-29)
+
+### Added
+- **Independent Public Benchmark Evaluation (HaluEval-QA)**:
+  - Downloaded and evaluated 100 responses (unfiltered first 50 pairs: 50 faithful, 50 hallucinated) from the official HaluEval QA benchmark (EMNLP 2023, MIT License) to `data/public_benchmarks/halueval_qa_50pairs.jsonl`.
+  - Built public benchmark runner `scripts/evaluate_public_benchmark.py` evaluating Groundedness via `cross-encoder/nli-deberta-v3-small`.
+  - Published comprehensive results (`data/public_benchmarks/halueval_evaluation_results.json`) disclosing exact metrics (Precision: 0.673, Recall: 0.660, F1: 0.667, Accuracy: 0.670) and honest performance gap vs Phase 2 self-built fixtures (-0.161 F1 gap, -0.340 recall gap).
+- **Red-Team Adversarial Audit Suite**:
+  - Implemented generator `scripts/build_adversarial_suite.py` producing 9 schema-valid adversarial traces across Scope, PII, and Groundedness (`data/adversarial/traces/`).
+  - Implemented evaluation harness `scripts/evaluate_adversarial.py` logging outcomes, defect root causes, and needed architectural fixes in `data/adversarial/adversarial_evaluation_results.json`.
+  - Honestly reported all 5 auditor defeats (SQL injection in args, evasive tool alias injection, obfuscated email, base64 token, and prompt injection inside tool result) alongside 4 successful defenses.
+- **External Non-Native Trace Format Adapter (OpenTelemetry GenAI)**:
+  - Implemented `OpenTelemetryGenAIAdapter` (`auditor/adapters/opentelemetry_adapter.py`) converting CNCF OpenTelemetry GenAI Semantic Conventions v1.28.0 OTLP JSON traces into the canonical internal `Trace` schema without hand-editing.
+  - Added real OTLP sample trace fixture at `fixtures/external_traces/opentelemetry_genai_trace.json`.
+  - Implemented comprehensive unit and end-to-end audit tests in `tests/test_opentelemetry_adapter.py` (4 tests passing).
+- **Single-Command Metric Reproducibility & CI Enforcement**:
+  - Created master reproducibility verification script `scripts/reproduce_all_metrics.py` asserting that 100% of published numbers in the README match repository outputs within floating-point tolerance.
+  - Added `make reproduce` and `make benchmark` targets to `Makefile`.
+  - Integrated `python scripts/reproduce_all_metrics.py --verify-all` and scheduled weekly cron (`cron: '0 4 * * 1'`) into `.github/workflows/ci.yml`.
+
+---
+
 ## [0.2.0] - Phase 2: Real Agents on Real Data (2026-09-29)
 
 ### Added

@@ -1,0 +1,12 @@
+{
+  "dataset_name": "HaluEval-QA",
+  "paper": "HaluEval: A Large-Scale Hallucination Evaluation Benchmark for Large Language Models (EMNLP 2023)",
+  "authors": "Junyi Li, Xiaoxue Cheng, Wayne Xin Zhao, Jian-Yun Nie, Ji-Rong Wen",
+  "repository": "https://github.com/RUCAIBox/HaluEval",
+  "license": "MIT License",
+  "access_date": "2026-09-29",
+  "subset": "qa_data.json (first 50 sequential entries)",
+  "total_pairs": 50,
+  "total_evaluation_responses": 100,
+  "selection_rule": "Sequential first 50 entries, strictly unfiltered (zero cherry-picking)"
+}

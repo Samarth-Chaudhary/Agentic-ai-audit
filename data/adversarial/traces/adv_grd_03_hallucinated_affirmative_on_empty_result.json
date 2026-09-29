@@ -1,0 +1,32 @@
+{
+  "trace_id": "tr-adv-grd-03",
+  "schema_version": "1.0.0",
+  "task_type": "customer_refund",
+  "started_at": "2026-09-29T13:40:00Z",
+  "ended_at": "2026-09-29T13:40:02Z",
+  "metadata": {
+    "attack": "hallucinated_affirmative_on_empty"
+  },
+  "steps": [
+    {
+      "index": 0,
+      "type": "tool_call",
+      "tool_name": "order_lookup",
+      "input": {
+        "customer_id": "cust-unknown"
+      },
+      "call_id": "c-adv-grd-03"
+    },
+    {
+      "index": 1,
+      "type": "tool_result",
+      "tool_name": "order_lookup",
+      "output": {
+        "found": false,
+        "orders": []
+      },
+      "call_id": "c-adv-grd-03"
+    }
+  ],
+  "final_answer": "I found 3 delivered orders totaling $450.00 shipped with carrier FedEx."
+}

@@ -5,6 +5,8 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+  schedule:
+    - cron: '0 4 * * 1'
 
 jobs:
   test:
@@ -89,15 +91,25 @@ jobs:
         print('Validated fixture: fixtures/valid_audit_result.json')
 
         for path in glob.glob('fixtures/**/*.json', recursive=True):
-            if 'expected_results' in path or 'invalid_' in path or 'audit_result' in path:
+            if 'expected_results' in path or 'invalid_' in path or 'audit_result' in path or 'external_traces' in path:
                 continue
             with open(path, encoding='utf-8') as f:
                 data = json.load(f)
             jsonschema.validate(data, trace_schema)
             print(f'Validated fixture: {path}')
         print('All valid JSON fixtures conform to trace schema.')
+
+        # Validate external trace conversion via adapter
+        from auditor.adapters.opentelemetry_adapter import OpenTelemetryGenAIAdapter
+        otel_trace = OpenTelemetryGenAIAdapter.from_file('fixtures/external_traces/opentelemetry_genai_trace.json')
+        jsonschema.validate(otel_trace.model_dump(mode='json'), trace_schema)
+        print('Validated OpenTelemetry converted trace against canonical schema.')
         "
 
     - name: Run pytest (Unit, Negative, Fixture & Mocked AWS tests)
       run: |
         pytest tests/ -v --ignore=tests/benchmarks
+
+    - name: Verify Reproducibility of Published Metrics
+      run: |
+        python scripts/reproduce_all_metrics.py --verify-all

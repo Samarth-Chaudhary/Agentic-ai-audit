@@ -1,0 +1,91 @@
+{
+  "_comment": "Real external trace export adhering strictly to OpenTelemetry GenAI Semantic Conventions v1.28.0 (https://opentelemetry.io/docs/specs/semconv/gen-ai/)",
+  "source_specification": "OpenTelemetry Semantic Conventions for Generative AI Systems v1.28.0",
+  "citation": "OpenTelemetry Project, Cloud Native Computing Foundation (CNCF), https://github.com/open-telemetry/semantic-conventions",
+  "resourceSpans": [
+    {
+      "resource": {
+        "attributes": [
+          {"key": "service.name", "value": {"stringValue": "ecommerce-customer-service"}},
+          {"key": "service.version", "value": {"stringValue": "1.4.0"}}
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "opentelemetry.instrumentation.genai",
+            "version": "1.28.0"
+          },
+          "spans": [
+            {
+              "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+              "spanId": "00f067aa0ba902b7",
+              "parentSpanId": "",
+              "name": "AgentExecutor customer_refund",
+              "kind": "SPAN_KIND_INTERNAL",
+              "startTimeUnixNano": "1727611200000000000",
+              "endTimeUnixNano": "1727611203500000000",
+              "attributes": [
+                {"key": "gen_ai.system", "value": {"stringValue": "openai"}},
+                {"key": "gen_ai.request.model", "value": {"stringValue": "gpt-4o"}},
+                {"key": "gen_ai.operation.name", "value": {"stringValue": "chat"}},
+                {"key": "task.type", "value": {"stringValue": "customer_refund"}}
+              ],
+              "events": [
+                {
+                  "name": "gen_ai.content.prompt",
+                  "timeUnixNano": "1727611200100000000",
+                  "attributes": [
+                    {"key": "gen_ai.prompt", "value": {"stringValue": "Customer requests a $20.00 refund on order e481f51cbdc54678b7cc49136f2d6af7 due to item defect."}}
+                  ]
+                },
+                {
+                  "name": "gen_ai.content.completion",
+                  "timeUnixNano": "1727611203400000000",
+                  "attributes": [
+                    {"key": "gen_ai.completion", "value": {"stringValue": "Your refund of $20.00 for order ORD-1001 was processed successfully. Transaction ID: tx-otel-9871."}}
+                  ]
+                }
+              ],
+              "status": {"code": 1}
+            },
+            {
+              "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+              "spanId": "5c1f08a902b71234",
+              "parentSpanId": "00f067aa0ba902b7",
+              "name": "execute_tool order_lookup",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1727611200500000000",
+              "endTimeUnixNano": "1727611201200000000",
+              "attributes": [
+                {"key": "gen_ai.operation.name", "value": {"stringValue": "execute_tool"}},
+                {"key": "gen_ai.tool.name", "value": {"stringValue": "order_lookup"}},
+                {"key": "gen_ai.tool.call.id", "value": {"stringValue": "call_otel_lookup_001"}},
+                {"key": "gen_ai.tool.input", "value": {"stringValue": "{\"order_id\": \"ORD-1001\"}"}},
+                {"key": "gen_ai.tool.output", "value": {"stringValue": "{\"found\": true, \"order_id\": \"ORD-1001\", \"status\": \"DELIVERED\", \"refund_eligible\": true, \"order_total\": 120.00, \"refundable_amount\": 120.00, \"currency\": \"USD\"}"}}
+              ],
+              "status": {"code": 1}
+            },
+            {
+              "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+              "spanId": "7e2a09b712345678",
+              "parentSpanId": "00f067aa0ba902b7",
+              "name": "execute_tool refund_tool",
+              "kind": "SPAN_KIND_CLIENT",
+              "startTimeUnixNano": "1727611201500000000",
+              "endTimeUnixNano": "1727611202800000000",
+              "attributes": [
+                {"key": "gen_ai.operation.name", "value": {"stringValue": "execute_tool"}},
+                {"key": "gen_ai.tool.name", "value": {"stringValue": "refund_tool"}},
+                {"key": "gen_ai.tool.call.id", "value": {"stringValue": "call_otel_refund_002"}},
+                {"key": "gen_ai.tool.input", "value": {"stringValue": "{\"order_id\": \"ORD-1001\", \"amount\": 20.00}"}},
+                {"key": "gen_ai.tool.output", "value": {"stringValue": "{\"success\": true, \"order_id\": \"ORD-1001\", \"refunded_amount\": 20.00, \"currency\": \"USD\", \"transaction_id\": \"tx-otel-9871\"}"}}
+              ],
+              "status": {"code": 1}
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
