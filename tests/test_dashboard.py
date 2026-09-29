@@ -16,7 +16,11 @@ from dashboard.charts import (
     chart_risk_distribution,
     chart_tool_violations,
 )
-from dashboard.components import render_risk_badge
+from dashboard.components import (
+    render_degraded_banner,
+    render_engine_badge,
+    render_risk_badge,
+)
 
 
 class TestDashboardApiClient:
@@ -167,6 +171,47 @@ class TestComponentsVisualSemantics:
         crit_badge = render_risk_badge("CRITICAL", 95.0)
         assert "CRITICAL" in crit_badge
         assert "#ef4444" in crit_badge
+
+    def test_render_engine_badge_full_ml(self):
+        engine_info = {
+            "nli_engine": "cross-encoder/nli-deberta-v3-small",
+            "embedding_engine": "sentence-transformers/all-MiniLM-L6-v2",
+            "pii_engine": "presidio-nlp (spacy: en_core_web_sm)",
+            "is_degraded": False,
+            "degraded_reasons": [],
+        }
+        badge = render_engine_badge(engine_info, is_degraded=False)
+        assert "VERIFIED ML ENGINE" in badge
+        assert "cross-encoder/nli-deberta-v3-small" in badge
+        assert "sentence-transformers/all-MiniLM-L6-v2" in badge
+        assert "presidio-nlp" in badge
+        assert "#10b981" in badge
+
+    def test_render_engine_badge_degraded(self):
+        engine_info = {
+            "nli_engine": "heuristic-negation-overlap-v1",
+            "embedding_engine": "jaccard-tfidf-fallback",
+            "pii_engine": "regex-only-fallback",
+            "is_degraded": True,
+            "degraded_reasons": ["CrossEncoder unavailable"],
+        }
+        badge = render_engine_badge(engine_info, is_degraded=True)
+        assert "DEGRADED ENGINE" in badge
+        assert "heuristic-negation-overlap-v1" in badge
+        assert "CrossEncoder unavailable" in badge
+        assert "#ef4444" in badge
+
+    def test_render_degraded_banner(self):
+        with patch("streamlit.error") as mock_st_error:
+            render_degraded_banner(is_degraded=True, degraded_reasons=["NLI unavailable"])
+            mock_st_error.assert_called_once()
+            call_text = mock_st_error.call_args[0][0]
+            assert "DEGRADED AUDIT WARNING" in call_text
+            assert "NLI unavailable" in call_text
+
+            mock_st_error.reset_mock()
+            render_degraded_banner(is_degraded=False)
+            mock_st_error.assert_not_called()
 
 
 class TestDashboardValidationGate:

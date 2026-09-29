@@ -343,13 +343,74 @@ DEMO_TRACES: list[dict[str, Any]] = [
             },
         ],
     },
+    {
+        "trace_id": "tr-degraded-006",
+        "task_type": "customer_support",
+        "processed_at": "2026-09-27T16:00:00Z",
+        "risk_score": 15.0,
+        "risk_tier": "LOW",
+        "status": "DEGRADED",
+        "is_degraded": True,
+        "degraded_reasons": [
+            "NLI cross-encoder unavailable: torch.cuda.OutOfMemoryError",
+            "Presidio NLP unavailable: spacy model 'en_core_web_sm' not installed",
+        ],
+        "engine_info": {
+            "nli_engine": "heuristic-negation-overlap-v1",
+            "embedding_engine": "sentence-transformers/all-MiniLM-L6-v2",
+            "pii_engine": "regex-only-fallback",
+            "is_degraded": True,
+            "degraded_reasons": [
+                "NLI cross-encoder unavailable: torch.cuda.OutOfMemoryError",
+                "Presidio NLP unavailable: spacy model 'en_core_web_sm' not installed",
+            ],
+        },
+        "pii_count": 0,
+        "scope_violations": 0,
+        "groundedness_failures": 0,
+        "summary": "Trace evaluated in degraded mode using heuristic fallback engines due to unavailable ML dependencies.",
+        "counts": {
+            "total_steps": 2,
+            "tool_calls": 1,
+            "tool_results": 1,
+            "errors": 0,
+            "scope_violations": 0,
+            "pii_entities_detected": 0,
+            "unsupported_claims": 0,
+        },
+        "findings": {"scope": [], "pii": [], "groundedness": []},
+        "execution_timeline": [
+            {
+                "step_index": 0,
+                "type": "USER_INPUT",
+                "content": "Check refund status for RF-991.",
+            },
+            {
+                "step_index": 1,
+                "type": "TOOL_CALL",
+                "tool_name": "check_refund",
+                "tool_input": {"refund_id": "RF-991"},
+            },
+            {
+                "step_index": 2,
+                "type": "TOOL_RESULT",
+                "tool_name": "check_refund",
+                "observation": "Refund RF-991 processed successfully.",
+            },
+            {
+                "step_index": 3,
+                "type": "FINAL_ANSWER",
+                "content": "Your refund RF-991 was processed successfully.",
+            },
+        ],
+    },
 ]
 
 
 def load_local_generated_traces() -> list[dict[str, Any]]:
     """Scan data/generated_traces and fixtures/ for local traces and convert to demo format."""
     from pathlib import Path
-    traces = []
+    traces: list[dict[str, Any]] = []
     root = Path(__file__).resolve().parent.parent
     paths = list(root.glob("data/generated_traces/**/*.json")) + list(root.glob("fixtures/valid_*.json"))
     for p in paths:
@@ -363,7 +424,7 @@ def load_local_generated_traces() -> list[dict[str, Any]]:
                 continue
             task_type = data.get("task_type", "custom")
             steps = data.get("steps", [])
-            timeline = []
+            timeline: list[dict[str, Any]] = []
             for s in steps:
                 if s.get("thought"):
                     timeline.append({"step_index": len(timeline), "type": "THOUGHT", "content": s["thought"]})
@@ -457,6 +518,8 @@ class AuditApiClient:
                     "risk_score": t["risk_score"],
                     "risk_tier": t["risk_tier"],
                     "processed_at": t["processed_at"],
+                    "is_degraded": bool(t.get("is_degraded", False)),
+                    "engine_info": t.get("engine_info"),
                     "pii_count": counts.get("pii_entities_detected", 0),
                     "scope_violation_count": counts.get("scope_violations", 0),
                     "groundedness_failure_count": counts.get("unsupported_claims", 0),

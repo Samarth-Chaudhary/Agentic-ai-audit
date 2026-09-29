@@ -29,6 +29,8 @@ try:
         chart_tool_violations,
     )
     from dashboard.components import (
+        render_degraded_banner,
+        render_engine_badge,
         render_evidence_panel,
         render_header,
         render_kpi_metrics,
@@ -36,15 +38,17 @@ try:
         render_trace_timeline,
     )
 except ImportError:
-    from api_client import AuditApiClient
-    from athena_client import DashboardAthenaService
-    from charts import (
+    from api_client import AuditApiClient  # type: ignore[no-redef]
+    from athena_client import DashboardAthenaService  # type: ignore[no-redef]
+    from charts import (  # type: ignore[no-redef]
         chart_avg_risk_by_task,
         chart_daily_risk_trend,
         chart_risk_distribution,
         chart_tool_violations,
     )
-    from components import (
+    from components import (  # type: ignore[no-redef]
+        render_degraded_banner,
+        render_engine_badge,
         render_evidence_panel,
         render_header,
         render_kpi_metrics,
@@ -179,6 +183,7 @@ def main() -> None:
                     "Date/Time": t.get("processed_at", ""),
                     "Risk Score": f"{float(t['risk_score']):.1f}",
                     "Risk Tier": t["risk_tier"],
+                    "Engine Mode": "⚠️ DEGRADED" if t.get("is_degraded") else "🛡️ Full ML",
                     "Scope Issues": t.get("scope_violation_count", t.get("scope_violations", 0)),
                     "PII Issues": t.get("pii_count", t.get("pii_findings", 0)),
                     "Groundedness Issues": t.get("groundedness_failure_count", t.get("groundedness_failures", 0)),
@@ -216,13 +221,23 @@ def main() -> None:
                     trace_detail = None
 
                 if trace_detail:
-                    score = float(trace_detail.get("risk_score") if trace_detail.get("risk_score") is not None else trace_detail.get("risk", {}).get("risk_score", 0.0))
+                    raw_score = trace_detail.get("risk_score")
+                    if raw_score is None:
+                        raw_score = trace_detail.get("risk", {}).get("risk_score", 0.0)
+                    score = float(raw_score or 0.0)
                     tier = str(trace_detail.get("risk_tier") or trace_detail.get("risk", {}).get("risk_tier", "LOW"))
                     processed_at = trace_detail.get("processed_at", "N/A")
                     summary = trace_detail.get("summary", "No summary generated.")
+                    is_degraded = bool(trace_detail.get("is_degraded", False))
+                    degraded_reasons = trace_detail.get("degraded_reasons", [])
+                    engine_info = trace_detail.get("engine_info")
+
+                    # Visible degraded mode warning banner if degraded
+                    if is_degraded:
+                        render_degraded_banner(is_degraded=True, degraded_reasons=degraded_reasons)
 
                     with st.container(border=True):
-                        col_a, col_b = st.columns([3, 1])
+                        col_a, col_b = st.columns([2, 1])
                         with col_a:
                             st.markdown(f"### Trace `{trace_detail.get('trace_id')}`")
                             st.write(f"**Task Classification:** `{trace_detail.get('task_type')}` | **Date/Time:** `{processed_at}`")
@@ -230,6 +245,8 @@ def main() -> None:
                         with col_b:
                             st.markdown(f"**Risk Evaluation:**\n\n{render_risk_badge(tier, score)}", unsafe_allow_html=True)
                             st.caption(f"Score: {score:.1f} / 100.0")
+                            # Engine identity displayed directly next to risk evaluation
+                            st.markdown(render_engine_badge(engine_info, is_degraded=is_degraded), unsafe_allow_html=True)
 
                     # 3. Reviewer UX Goal: WHAT, WHERE, WHY, EVIDENCE
                     findings = trace_detail.get("findings", {})

@@ -67,6 +67,53 @@ def render_risk_badge(tier: str, score: float) -> str:
     )
 
 
+def render_engine_badge(engine_info: dict[str, Any] | None = None, is_degraded: bool = False) -> str:
+    """Return HTML formatted engine identity badge displaying engine info next to risk score."""
+    degraded = is_degraded or (bool(engine_info.get("is_degraded")) if engine_info else False)
+
+    if degraded:
+        reasons = (engine_info or {}).get("degraded_reasons", [])
+        reasons_str = f"<br><span style='color: #fca5a5;'>Reason: {', '.join(reasons)}</span>" if reasons else ""
+        nli = (engine_info or {}).get("nli_engine", "heuristic-fallback")
+        emb = (engine_info or {}).get("embedding_engine", "jaccard-tfidf-fallback")
+        pii = (engine_info or {}).get("pii_engine", "regex-only-fallback")
+        return (
+            f'<div style="margin-top: 8px; padding: 6px 10px; border-radius: 6px; '
+            f'background-color: rgba(239, 68, 68, 0.12); border: 1px solid #ef4444; color: #ef4444; font-size: 0.82em;">'
+            f'<strong>⚠️ DEGRADED ENGINE</strong>{reasons_str}<br>'
+            f'<span style="color: #cbd5e1;">NLI:</span> <code>{nli}</code><br>'
+            f'<span style="color: #cbd5e1;">Embeddings:</span> <code>{emb}</code><br>'
+            f'<span style="color: #cbd5e1;">PII:</span> <code>{pii}</code>'
+            f'</div>'
+        )
+
+    nli = (engine_info or {}).get("nli_engine", "cross-encoder/nli-deberta-v3-small")
+    emb = (engine_info or {}).get("embedding_engine", "sentence-transformers/all-MiniLM-L6-v2")
+    pii = (engine_info or {}).get("pii_engine", "presidio-nlp (spacy: en_core_web_sm)")
+    return (
+        f'<div style="margin-top: 8px; padding: 6px 10px; border-radius: 6px; '
+        f'background-color: rgba(16, 185, 129, 0.10); border: 1px solid #10b981; color: #10b981; font-size: 0.82em;">'
+        f'<strong>🛡️ VERIFIED ML ENGINE</strong><br>'
+        f'<span style="color: #cbd5e1;">NLI:</span> <code>{nli}</code><br>'
+        f'<span style="color: #cbd5e1;">Embeddings:</span> <code>{emb}</code><br>'
+        f'<span style="color: #cbd5e1;">PII:</span> <code>{pii}</code>'
+        f'</div>'
+    )
+
+
+def render_degraded_banner(is_degraded: bool, degraded_reasons: list[str] | None = None) -> None:
+    """Render prominent visual warning banner if audit result is in degraded mode."""
+    if is_degraded:
+        reasons_bullets = "\n".join(f"- {r}" for r in (degraded_reasons or [])) if degraded_reasons else "- Fallback heuristic engines utilized"
+        st.error(
+            f"### ⚠️ DEGRADED AUDIT WARNING\n\n"
+            f"This audit ran in **DEGRADED MODE** because one or more required ML models were unavailable.\n\n"
+            f"**Degraded Reasons:**\n{reasons_bullets}\n\n"
+            f"*Notice: Confidence is reduced. Results were produced via heuristic fallback engines and require manual review.*",
+            icon="⚠️",
+        )
+
+
 def render_trace_timeline(timeline: list[dict[str, Any]], findings: dict[str, list[dict[str, Any]]]) -> None:
     """Render chronological execution timeline with findings overlay."""
     st.subheader("⏱️ Chronological Execution Timeline")
@@ -197,12 +244,14 @@ def render_evidence_panel(findings: dict[str, list[dict[str, Any]]]) -> None:
                 rule = item.get("rule_violated") or item.get("rule", "ALLOWED_TOOLS")
                 severity = item.get("severity", "HIGH")
                 explanation = item.get("explanation") or item.get("detail", "Unauthorized tool invocation.")
+                engine = item.get("engine", "policy-rule-engine")
 
                 with st.expander(f"Tool `{tool}` - {severity}", expanded=True):
-                    c1, c2, c3 = st.columns(3)
+                    c1, c2, c3, c4 = st.columns(4)
                     c1.write(f"**Tool:** `{tool}`")
                     c2.write(f"**Step:** `{step}`")
                     c3.write(f"**Severity:** `{severity}`")
+                    c4.write(f"**Engine:** `{engine}`")
                     st.write(f"**Rule:** `{rule}`")
                     st.write(f"**Explanation:** {explanation}")
 
@@ -217,12 +266,14 @@ def render_evidence_panel(findings: dict[str, list[dict[str, Any]]]) -> None:
                 field = item.get("field_path") or item.get("field", "unknown_field")
                 severity = item.get("severity", "CRITICAL")
                 snippet = item.get("redacted_snippet", "<REDACTED>")
+                engine = item.get("engine", "presidio-nlp (spacy: en_core_web_sm)")
 
                 with st.expander(f"Entity `{pii_type}` - {severity}", expanded=True):
-                    c1, c2, c3 = st.columns(3)
+                    c1, c2, c3, c4 = st.columns(4)
                     c1.write(f"**Type:** `{pii_type}`")
                     c2.write(f"**Step:** `{step}`")
                     c3.write(f"**Severity:** `{severity}`")
+                    c4.write(f"**Engine:** `{engine}`")
                     st.write(f"**Field:** `{field}`")
                     st.write(f"**Redacted Snippet:** `{snippet}`")
 
@@ -238,12 +289,14 @@ def render_evidence_panel(findings: dict[str, list[dict[str, Any]]]) -> None:
                 sim = float(item.get("similarity", 0.0))
                 nli_verdict = item.get("nli_verdict", "NEUTRAL")
                 audit_verdict = item.get("audit_verdict", "UNSUPPORTED")
+                engine = item.get("engine", "cross-encoder/nli-deberta-v3-small")
 
                 with st.expander(f"Claim: \"{claim[:60]}...\" - {audit_verdict}", expanded=True):
-                    c1, c2, c3 = st.columns(3)
+                    c1, c2, c3, c4 = st.columns(4)
                     c1.write(f"**Audit Verdict:** `{audit_verdict}`")
                     c2.write(f"**NLI Verdict:** `{nli_verdict}`")
                     c3.write(f"**Similarity:** `{sim:.2f}`")
+                    c4.write(f"**Engine:** `{engine}`")
                     st.write(f"**Claim:** {claim}")
                     st.write(f"**Evidence Snippet:** {evidence}")
                     st.write(f"**Evidence Step:** `{ev_step}`")
