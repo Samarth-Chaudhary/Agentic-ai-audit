@@ -170,7 +170,7 @@ def handler(
         pii_findings = audit_record.get("findings", {}).get("pii", [])
         sanitized_timeline = redact_execution_timeline(raw_steps, pii_findings)
 
-        # 4. Assemble response object matching Part 7 requirements
+        # 4. Assemble API response payload
         response_payload = {
             "trace_id": audit_record.get("trace_id"),
             "task_type": audit_record.get("task_type"),

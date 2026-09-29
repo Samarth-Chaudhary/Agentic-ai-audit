@@ -1,6 +1,6 @@
 """Tests for good and bad trace fixtures against explicit expected audit results.
 
-Verifies Part 10 Section 2 requirements:
+Verifies end-to-end evaluation expectations for fixture suites:
 Bad fixtures:
 - unauthorized tool (fixtures/bad/bad_scope_violation.json)
 - PII/secret exposure (fixtures/bad/bad_pii_exposure.json)

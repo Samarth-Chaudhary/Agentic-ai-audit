@@ -78,7 +78,7 @@ def handler(
     try:
         items, last_eval_key = repo.list_audit_results(limit=limit_param, last_evaluated_key=start_key)
 
-        # Build clean summary records adhering strictly to Part 7 specification
+        # Build clean summary records adhering to API specification
         summary_records = []
         for item in items:
             counts = item.get("counts") or {}

@@ -1,6 +1,6 @@
 # Baseline Reconnaissance and Repository Inventory
 
-> **Document Type:** Chunk 1 Upgrade Baseline Report  
+> **Document Type:** Initial System Baseline Report  
 > **System:** AI Agent Governance & Audit Trail Analyzer  
 > **Status:** Factually Measured & Verified  
 > **Date:** September 2026  
@@ -10,7 +10,7 @@
 
 ## 1. Executive Summary & Objective
 
-In accordance with **Part 0 (Global Modification Contract)** and **Chunk 1 (Baseline, Reconnaissance, and Repository Cleanup)**, this document establishes a verifiable, reproducible baseline of the existing AI Agent Governance & Audit Trail Analyzer repository prior to any substantive functional changes.
+This document establishes a verifiable, reproducible baseline of the existing AI Agent Governance & Audit Trail Analyzer repository prior to any substantive functional changes.
 
 Every metric, count, and status presented herein was directly executed and measured on the repository in its unmodified state. No numbers are fabricated or estimated unless explicitly labeled.
 
@@ -20,7 +20,7 @@ Every metric, count, and status presented herein was directly executed and measu
 
 ### 2.1 Major Component Classification
 
-In accordance with Chunk 1 instructions, each major subsystem is classified as one of:
+Each major subsystem is classified as one of:
 - `IMPLEMENTED AND VERIFIED`: Implemented in code and verified by automated execution/tests.
 - `IMPLEMENTED BUT UNVERIFIED`: Implemented in code but not yet verified against live cloud infrastructure or end-to-end integration.
 - `PARTIAL`: Incomplete implementation or missing edge-case handling.
@@ -35,7 +35,7 @@ In accordance with Chunk 1 instructions, each major subsystem is classified as o
 | **Agent Runner & Tool Registry** | `IMPLEMENTED AND VERIFIED` | `agent/runner.py`, `agent/provider.py`, `agent/tools/*.py`. Verified with 6 tools, loop limit enforcement, input validation, and trace emission. |
 | **Scope Governance Detector** | `IMPLEMENTED AND VERIFIED` | `auditor/scope_detector.py`, `auditor/rules/*.py`. Verified with tool permission, call limit, unauthorized data source, and refund rule checks. |
 | **PII & Sensitive Data Detector** | `IMPLEMENTED AND VERIFIED` | `auditor/pii_detector.py`, `auditor/redaction.py`, `auditor/luhn.py`. Verified with Presidio regex and custom credit card/API key redaction. |
-| **Groundedness Detector & NLI** | `PARTIAL` / `MOCKED` | `auditor/groundedness_detector.py`, `auditor/nli_classifier.py`, `auditor/evidence.py`. In tests, NLI is mocked (`MockNLIClassifier`). When running offline without downloaded transformer weights, heuristic fallback has a known numeric parsing flaw causing false positive `CONTRADICTION` on legitimate refunds (documented in Chunk 2). |
+| **Groundedness Detector & NLI** | `PARTIAL` / `MOCKED` | `auditor/groundedness_detector.py`, `auditor/nli_classifier.py`, `auditor/evidence.py`. In tests, NLI is mocked (`MockNLIClassifier`). When running offline without downloaded transformer weights, heuristic fallback has a known numeric parsing flaw causing false positive `CONTRADICTION` on legitimate refunds. |
 | **Deterministic Risk Engine** | `IMPLEMENTED AND VERIFIED` | `auditor/risk_engine.py`. Formula: `Overall = 0.35 * Scope + 0.35 * PII + 0.30 * Groundedness`. Deterministic summary builder and tier thresholds (LOW/MED/HIGH/CRIT) verified by tests. |
 | **Lambda Handlers & Repositories** | `IMPLEMENTED AND VERIFIED` | `lambda/audit_handler.py`, `lambda/get_trace.py`, `lambda/list_traces.py`, `lambda/repositories/*.py`. Verified locally against `moto` AWS mocks. |
 | **AWS Cloud Infrastructure (Terraform)** | `IMPLEMENTED BUT UNVERIFIED` | `terraform/*.tf` (12 files declaring 20 resources). Verified structurally by `scripts/validate_terraform.py`. Not deployed or verified against live AWS cloud account. Duplicate directory `infra/terraform/` identified. |
@@ -86,9 +86,9 @@ In accordance with Chunk 1 instructions, each major subsystem is classified as o
 | `auditor/redaction.py` | Deterministic text masking utilities | Valid | regex | **KEEP** |
 | `auditor/luhn.py` | Mod-10 Luhn credit card validation | Valid | pure python | **KEEP** |
 | `auditor/claim_extractor.py` | Factual claim extraction from final answer | Valid | regex, heuristics | **KEEP** |
-| `auditor/evidence.py` | Evidence extraction from `tool_result` steps | Valid | `pydantic`, `json` | **MODIFY** (Chunk 2 retrieval repair) |
+| `auditor/evidence.py` | Evidence extraction from `tool_result` steps | Valid | `pydantic`, `json` | **MODIFY** (Multi-step retrieval repair) |
 | `auditor/nli_classifier.py` | Transformer & heuristic NLI classifier | Has heuristic numeric bug | `transformers`, `torch` | **MODIFY** (Fix numeric heuristic bug) |
-| `auditor/groundedness_detector.py` | Groundedness detector orchestrator | Valid | `sentence-transformers` | **MODIFY** (Chunk 2 multi-tool retrieval) |
+| `auditor/groundedness_detector.py` | Groundedness detector orchestrator | Valid | `sentence-transformers` | **MODIFY** (Multi-tool evidence retrieval) |
 | `auditor/risk_engine.py` | Deterministic weighted risk scoring | Valid | `pydantic` | **KEEP** |
 | `auditor/orchestrator.py` | Local multi-detector orchestrator | Valid | all detectors | **KEEP** |
 | `lambda/__init__.py` | Lambda package initializer | Valid | None | **KEEP** |
@@ -227,7 +227,7 @@ Prior to cleanup, running `ruff check .` produced 472 violations across 23 disti
 1. **Terraform CLI**: `terraform` binary is not in Windows system PATH. HCL validation relies on `scripts/validate_terraform.py`.
 2. **Coverage Tooling**: `coverage.py` and `pytest-cov` are not present in `requirements.txt`.
 3. **Type Checker**: `mypy` is not installed or configured.
-4. **NLI Transformer Offline Fallback**: In local/offline environments without pre-cached HuggingFace weights, `TransformerNLIClassifier` falls back to `heuristic_nli_classify()`, which contains an identified bug in numeric set comparison (see Chunk 2).
+4. **NLI Transformer Offline Fallback**: In local/offline environments without pre-cached HuggingFace weights, `TransformerNLIClassifier` falls back to `heuristic_nli_classify()`, which contains an identified bug in numeric set comparison resolved in the groundedness repair milestone.
 
 ---
 
@@ -291,7 +291,7 @@ Comparison via `filecmp.cmpfiles` confirmed **100% byte-for-byte identity** acro
 
 ## 7. Initial Quality Gates & Compliance Roadmap
 
-To satisfy Global Invariant 9 and Chunk 1 requirements:
+To establish strict automated quality gates:
 1. **Remove CI Bypasses**: Remove `|| true` from `.github/workflows/ci.yml` and `Makefile`.
 2. **Configure Ruff in `pyproject.toml`**: Configure explicit lint rule sets (`E`, `W`, `F`, `I`, `UP`, `B`, `C4`) and ignore non-contractual warnings (`E501`, `B008`) plus per-file-ignores for `scripts/*` and `dashboard/app.py` (`E402`).
 3. **Execute Clean Fixes**: Fix all genuine linting errors across codebase so `ruff check .` exits 0 cleanly.
@@ -336,5 +336,5 @@ To satisfy Global Invariant 9 and Chunk 1 requirements:
 - `tests/test_runner.py`: Modernized `zip()` call with `strict=False`.
 - `tests/` test suites: Removed redundant `"r"` mode arguments across test files.
 - `infra/README.md`: Updated documentation to point to authoritative root `terraform/` directory.
-- `docs/baseline.md`: Authored and updated comprehensive Chunk 1 reconnaissance, baseline measurements, and repository inventory report.
+- `docs/baseline.md`: Authored and updated comprehensive reconnaissance, baseline measurements, and repository inventory report.
 

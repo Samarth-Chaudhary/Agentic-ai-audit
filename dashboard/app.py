@@ -29,6 +29,7 @@ try:
         chart_tool_violations,
     )
     from dashboard.components import (
+        render_3d_trail_replay,
         render_degraded_banner,
         render_engine_badge,
         render_evidence_panel,
@@ -47,6 +48,7 @@ except ImportError:
         chart_tool_violations,
     )
     from components import (  # type: ignore[no-redef]
+        render_3d_trail_replay,
         render_degraded_banner,
         render_engine_badge,
         render_evidence_panel,
@@ -96,7 +98,7 @@ def main() -> None:
 
     selected_task_type = st.sidebar.selectbox(
         "Task Type:",
-        options=["All Tasks", "customer_support", "financial_reporting", "financial_analysis"],
+        options=["All Tasks", "customer_refund", "research_summary"],
         index=0,
     )
     task_filter = None if selected_task_type == "All Tasks" else selected_task_type
@@ -175,7 +177,7 @@ def main() -> None:
         if not traces_list:
             st.info("No traces matched the selected filter criteria.")
         else:
-            # 1. Trace Table with exact columns per Part 9 specification
+            # 1. Trace Table with audit summary columns
             df_table = pd.DataFrame([
                 {
                     "Trace ID": t["trace_id"],
@@ -275,8 +277,9 @@ def main() -> None:
                             st.markdown(f"**WHY Flagged?**\n\nRisk score of {score:.1f} ({tier}) derived from: {scope_count} scope violations, {pii_count} sensitive PII leaks, {ground_count} groundedness issues.")
                             st.markdown("**WHAT Evidence?**\n\nSee chronological step timeline and evidence tabs below for exact rule definitions and redacted excerpts.")
 
-                    # 4. Chronological Execution Timeline with Inline Findings Overlay
+                    # 4. Interactive 3D Agent Trail Replay & Chronological Timeline
                     timeline = trace_detail.get("execution_timeline", [])
+                    render_3d_trail_replay(timeline, findings)
                     render_trace_timeline(timeline, findings)
 
                     st.write("")

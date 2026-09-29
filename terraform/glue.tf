@@ -19,7 +19,7 @@ resource "aws_glue_catalog_table" "audit_analytics" {
     "has_encrypted_data"     = "false"
   }
 
-  # Partitioning keys per Part 8 specification: date and task_type
+  # Partitioning keys for analytics query optimization: date and task_type
   partition_keys {
     name = "date"
     type = "string"

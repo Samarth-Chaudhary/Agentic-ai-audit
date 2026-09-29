@@ -147,7 +147,7 @@ def render_trace_timeline(timeline: list[dict[str, Any]], findings: dict[str, li
         step_type = str(step.get("type", "UNKNOWN")).upper()
         tool_name = step.get("tool_name")
 
-        # Formulate human-readable step description matching Part 9 reviewer guidelines
+        # Formulate human-readable step description for audit display
         if tool_name:
             if "CALL" in step_type:
                 step_desc = f"{tool_name} tool call"
@@ -300,3 +300,23 @@ def render_evidence_panel(findings: dict[str, list[dict[str, Any]]]) -> None:
                     st.write(f"**Claim:** {claim}")
                     st.write(f"**Evidence Snippet:** {evidence}")
                     st.write(f"**Evidence Step:** `{ev_step}`")
+
+
+def render_3d_trail_replay(timeline: list[dict[str, Any]], findings: dict[str, Any]) -> None:
+    """Render interactive 3D agent trail replay with Play/Pause animation controls."""
+    from dashboard.charts import chart_3d_trail_replay
+
+    with st.container(border=True):
+        st.markdown("#### 🌐 3D Agent Trail & State Replay")
+        st.caption(
+            "Hardware-accelerated WebGL 3D execution trajectory: **X** = Step Index, "
+            "**Y** = Execution Layer (User / Reasoning / Tool Call / Observation / Answer), "
+            "**Z** = Risk Severity (0-10). Press **▶ Play** or drag the slider to animate state transitions."
+        )
+        if not timeline:
+            st.info("No timeline events available to reconstruct 3D trajectory.")
+            return
+
+        fig = chart_3d_trail_replay(timeline, findings)
+        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": True})
+

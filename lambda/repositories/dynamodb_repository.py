@@ -108,7 +108,7 @@ class DynamoDBRepository:
             "groundedness": audit_result.get("groundedness_findings", []),
         }
 
-        # Item payload conforming to Part 7 specification
+        # Item payload conforming to DynamoDB audit item schema
         item: dict[str, Any] = {
             "trace_id": trace_id,
             "task_type": audit_result.get("task_type", "default"),

@@ -1,4 +1,4 @@
-"""Unit tests for the Risk Scoring Engine (Part 6).
+"""Unit tests for the Risk Scoring Engine.
 
 Covers:
 - Scope score calculation (counts, severities, capping at 100)

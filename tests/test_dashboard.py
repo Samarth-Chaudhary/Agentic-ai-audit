@@ -1,4 +1,4 @@
-"""Unit and integration tests for the Streamlit Reviewer Dashboard (Part 9)."""
+"""Unit and integration tests for the Streamlit Reviewer Dashboard."""
 
 from __future__ import annotations
 
@@ -215,7 +215,7 @@ class TestComponentsVisualSemantics:
 
 
 class TestDashboardValidationGate:
-    """Tests corresponding directly to Part 9 Validation Gate requirements."""
+    """Tests corresponding directly to Dashboard Validation Gate requirements."""
 
     def test_application_modules_import_cleanly(self):
         import dashboard.api_client

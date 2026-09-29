@@ -2,7 +2,7 @@
 
 ## Architectural Evaluation: Container Image vs. ZIP Packaging
 
-In accordance with **Part 7 - AWS Operational Pipeline**, this document records the architectural decision regarding packaging dependencies for the AI Agent Governance & Audit Lambda functions.
+This document records the architectural decision regarding packaging dependencies for the AI Agent Governance & Audit Lambda functions.
 
 ---
 

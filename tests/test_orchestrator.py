@@ -1,4 +1,4 @@
-"""End-to-end integration tests for AuditOrchestrator and local pipeline (Part 6).
+"""End-to-end integration tests for AuditOrchestrator and local pipeline.
 
 Verifies the complete flow:
 TRACE -> VALIDATE -> LOAD POLICY -> SCOPE -> PII -> GROUNDEDNESS -> RISK -> AUDIT RESULT -> VALIDATE SCHEMA

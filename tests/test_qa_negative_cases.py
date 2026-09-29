@@ -1,6 +1,6 @@
-"""Comprehensive negative tests for Part 10 - Quality Assurance and Testing.
+"""Comprehensive negative test suite for Quality Assurance and Robustness.
 
-Covers all 16 negative scenarios specified in Part 10:
+Covers all 16 negative scenarios across validation, detectors, and pipelines:
 1. missing trace_id
 2. invalid UUID / ID format
 3. unknown task_type
