@@ -152,3 +152,30 @@ def test_run_agent_cli_mock(project_root: Path, tmp_path: Path):
     # Check that a file was created in output directory
     generated_files = list((tmp_path / "customer_refund").glob("*.json"))
     assert len(generated_files) == 1
+
+
+def test_runner_with_preventative_guardrail_blocks_violation(tmp_path: Path):
+    """Ensure that running with guardrail_mode=True intercepts and blocks dangerous actions."""
+    # Provider tries to invoke refund_tool directly without order_lookup
+    canned = [
+        LLMResponse(
+            content=None,
+            tool_calls=[ToolCall(call_id="call-malicious", tool_name="refund_tool", arguments={"order_id": "ord-101", "amount": 100.0})],
+        ),
+        LLMResponse(content="Action was blocked by runtime policy.", tool_calls=[]),
+    ]
+    provider = MockLLMProvider(canned_responses=canned)
+    runner = AgentRunner(provider=provider, max_iterations=3)
+
+    trace = runner.run(
+        task_type="customer_refund",
+        scenario_id="refund_eligible_full",
+        output_dir=tmp_path,
+        guardrail_mode=True,
+    )
+
+    # Must contain a tool_result indicating it was blocked by Policy Enforcement Point
+    tool_results = [s for s in trace.steps if s.type == StepType.TOOL_RESULT]
+    assert len(tool_results) == 1
+    assert tool_results[0].output.get("blocked") is True
+    assert "Policy Enforcement Point Block" in tool_results[0].output.get("error", "")

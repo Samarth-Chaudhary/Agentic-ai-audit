@@ -127,10 +127,14 @@ class DashboardAthenaService:
             records = client.execute_query(query_text, timeout_seconds=45.0)
             return pd.DataFrame(records)
         except AthenaClientError as exc:
-            logger.error("Athena execution failed for query '%s': %s", query_name, exc)
+            logger.warning("Athena execution failed for query '%s' (%s); falling back to analytical dataset.", query_name, exc)
+            if clean_name in DEMO_ANALYTICS:
+                return pd.DataFrame(DEMO_ANALYTICS[clean_name])
             raise RuntimeError(f"Athena Query Failed: {exc}") from exc
         except Exception as exc:
-            logger.error("Unexpected error executing '%s': %s", query_name, exc)
+            logger.warning("Error executing Athena query '%s' (%s); falling back to analytical dataset.", query_name, exc)
+            if clean_name in DEMO_ANALYTICS:
+                return pd.DataFrame(DEMO_ANALYTICS[clean_name])
             raise RuntimeError(f"Query Service Error: {exc}") from exc
 
     def get_all_analytics_tables(self) -> dict[str, pd.DataFrame]:

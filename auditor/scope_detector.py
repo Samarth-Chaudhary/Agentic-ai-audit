@@ -12,8 +12,8 @@ from pydantic import BaseModel, Field
 
 from auditor.models import ScopeFinding, Trace
 from auditor.policy_loader import PolicyLoader, RiskConfig, TaskPolicy
+from auditor.rules.business_rule_evaluator import evaluate_business_rules
 from auditor.rules.call_limit_rules import check_call_limits_and_repetition
-from auditor.rules.refund_rules import check_refund_business_rules
 from auditor.rules.tool_permission_rules import check_tool_permissions_and_data_sources
 from project.logging import get_logger
 
@@ -81,13 +81,13 @@ class ScopeDetector:
         )
         findings.extend(call_limit_findings)
 
-        # 3. Modular Rule: Refund Business Rules
-        refund_findings = check_refund_business_rules(
+        # 3. Modular Rule: Decoupled Invariant & Business Rules
+        business_findings = evaluate_business_rules(
             trace=trace_obj,
             task_policy=task_policy,
             risk_config=self.risk_config,
         )
-        findings.extend(refund_findings)
+        findings.extend(business_findings)
 
         # Aggregate counts by severity
         severity_counts: dict[str, int] = {

@@ -10,6 +10,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
+from agent.pep_guardrail import PolicyEnforcementPoint, PolicyViolationError
 from agent.provider import LLMMessage, LLMProvider
 from agent.scenarios import Scenario, get_scenario
 from agent.tools import get_tools_for_task
@@ -45,6 +46,7 @@ class AgentRunner:
         scenario_id: str | None = None,
         custom_scenario: Scenario | None = None,
         output_dir: str | Path | None = None,
+        guardrail_mode: bool = False,
     ) -> Trace:
         """Execute the complete agent flow following the 15-step contract."""
         # 1. create trace_id
@@ -61,6 +63,7 @@ class AgentRunner:
 
         # 4. load available tools based on policy
         policy = self.policy_loader.get_policy(task_type)
+        pep = PolicyEnforcementPoint(policy) if guardrail_mode else None
         available_tools: list[BaseTool] = get_tools_for_task(policy.allowed_tools)
         tool_map: dict[str, BaseTool] = {t.name: t for t in available_tools}
 
@@ -157,6 +160,32 @@ class AgentRunner:
                     call_id=call_id,
                 )
 
+                # Preventative Policy Enforcement Point check
+                if pep is not None:
+                    try:
+                        pep.intercept_tool_call(tool_name, tool_args)
+                    except PolicyViolationError as pve:
+                        output_payload = {
+                            "error": f"Policy Enforcement Point Block: {pve!s}",
+                            "rule_violated": pve.rule_violated,
+                            "severity": pve.severity.value,
+                            "blocked": True,
+                            "success": False,
+                        }
+                        trace_builder.add_tool_result(
+                            tool_name=tool_name,
+                            output_payload=output_payload,
+                            call_id=call_id,
+                        )
+                        messages.append(
+                            LLMProvider.create_tool_result_message(
+                                tool_call_id=call_id,
+                                tool_name=tool_name,
+                                result=output_payload,
+                            )
+                        )
+                        continue
+
                 # Execute tool
                 if tool_name not in tool_map:
                     output_payload = {
@@ -171,6 +200,8 @@ class AgentRunner:
                     tool_instance = tool_map[tool_name]
                     try:
                         output_payload = tool_instance(**tool_args)
+                        if pep is not None:
+                            pep.record_successful_execution(tool_name, tool_args)
                     except ToolError as te:
                         output_payload = {"error": f"Tool validation error: {te!s}", "success": False}
                     except Exception as ex:

@@ -19,10 +19,23 @@ resource "aws_dynamodb_table" "audit_results" {
     type = "S"
   }
 
+  attribute {
+    name = "risk_tier"
+    type = "S"
+  }
+
   # Global Secondary Index to query traces by task_type chronologically
   global_secondary_index {
     name            = "TaskTypeIndex"
     hash_key        = "task_type"
+    range_key       = "processed_at"
+    projection_type = "ALL"
+  }
+
+  # Global Secondary Index for high-velocity operational triage by risk tier
+  global_secondary_index {
+    name            = "RiskTierIndex"
+    hash_key        = "risk_tier"
     range_key       = "processed_at"
     projection_type = "ALL"
   }

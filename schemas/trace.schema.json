@@ -55,6 +55,10 @@
     "final_answer": {
       "type": "string",
       "description": "The final observable answer or response delivered to the user or caller."
+    },
+    "merkle_root_hash": {
+      "type": ["string", "null"],
+      "description": "Cryptographic SHA-256 Merkle root hash sealing the execution trace."
     }
   },
   "additionalProperties": false,
@@ -108,6 +112,14 @@
           "type": ["object", "null"],
           "description": "Optional auxiliary step details.",
           "additionalProperties": true
+        },
+        "prev_step_hash": {
+          "type": ["string", "null"],
+          "description": "Cryptographic SHA-256 hash of immediately preceding step."
+        },
+        "step_hash": {
+          "type": ["string", "null"],
+          "description": "Cryptographic SHA-256 hash sealing this individual step."
         }
       },
       "additionalProperties": false,

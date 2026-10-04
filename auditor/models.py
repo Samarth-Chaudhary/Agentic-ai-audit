@@ -5,11 +5,27 @@ Strictly aligned with schemas/trace.schema.json and schemas/audit_result.schema.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import uuid
 from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
+
+
+def compute_step_hash(
+    prev_step_hash: str | None,
+    index: int,
+    step_type: str,
+    payload: Any,
+    timestamp: str | None,
+) -> str:
+    """Compute SHA-256 cryptographic hash sealing an execution step and binding to preceding hash."""
+    prev = prev_step_hash or ("0" * 64)
+    normalized_payload = json.dumps(payload, sort_keys=True, default=str) if payload is not None else ""
+    raw = f"{prev}|{index}|{step_type}|{normalized_payload}|{timestamp or ''}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
 class StepType(str, Enum):
@@ -44,6 +60,23 @@ class TraceStep(BaseModel):
     message: str | None = Field(default=None, description="Error message for error step")
     error_code: str | None = Field(default=None, description="Optional error classification")
     details: dict[str, Any] | None = Field(default=None, description="Optional metadata details")
+    prev_step_hash: str | None = Field(default=None, description="Cryptographic SHA-256 hash of preceding step")
+    step_hash: str | None = Field(default=None, description="Cryptographic SHA-256 hash sealing this step")
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_step_data(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            raw_type = data.get("type")
+            if isinstance(raw_type, str):
+                t_lower = raw_type.lower()
+                if t_lower in ("user_input", "user", "human", "prompt", "input", "system"):
+                    data["type"] = StepType.ASSISTANT_MESSAGE.value
+                    if not data.get("content"):
+                        data["content"] = str(data.get("input") or data.get("message") or data.get("text") or "User request")
+                elif t_lower in ("assistant_message", "tool_call", "tool_result", "error"):
+                    data["type"] = t_lower
+        return data
 
     @model_validator(mode="after")
     def validate_step_contract(self) -> TraceStep:
@@ -76,6 +109,32 @@ class Trace(BaseModel):
     metadata: dict[str, Any] | None = Field(default=None, description="Contextual execution metadata")
     steps: list[TraceStep] = Field(min_length=1, description="Observable step list")
     final_answer: str = Field(description="Final answer delivered to caller")
+    merkle_root_hash: str | None = Field(default=None, description="Cryptographic root sealing execution chain")
+
+    def verify_integrity(self) -> tuple[bool, str | None]:
+        """Verify cryptographic chain of custody and tamper-evidence across all steps."""
+        if not self.steps:
+            return True, None
+
+        if not self.steps[0].step_hash:
+            return True, None
+
+        expected_prev = "0" * 64
+        for step in self.steps:
+            if step.prev_step_hash and step.prev_step_hash != expected_prev:
+                return False, f"Broken chain link at step {step.index}: expected prev {expected_prev}, got {step.prev_step_hash}"
+
+            payload = step.input if step.type == StepType.TOOL_CALL else (step.output if step.type == StepType.TOOL_RESULT else (step.content if step.type == StepType.ASSISTANT_MESSAGE else step.message))
+            recomputed = compute_step_hash(step.prev_step_hash, step.index, step.type.value, payload, step.timestamp)
+            if step.step_hash and step.step_hash != recomputed:
+                return False, f"Cryptographic integrity violation at step {step.index}: step payload tampered with (expected {recomputed}, recorded {step.step_hash})"
+
+            expected_prev = step.step_hash or recomputed
+
+        if self.merkle_root_hash and self.merkle_root_hash != expected_prev:
+            return False, f"Merkle root mismatch: expected {expected_prev}, recorded {self.merkle_root_hash}"
+
+        return True, None
 
 
 class ScopeFinding(BaseModel):

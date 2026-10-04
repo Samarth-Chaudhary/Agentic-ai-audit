@@ -1,7 +1,27 @@
-# Raw Trace Bucket
+# Raw Trace Bucket with WORM Immutability (SOC 2 Type II / SEC 17a-4 / EU AI Act)
 resource "aws_s3_bucket" "traces" {
-  bucket        = "${var.project_name}-${var.trace_bucket_name}-${var.environment}"
-  force_destroy = var.environment == "dev"
+  bucket              = "${var.project_name}-${var.trace_bucket_name}-${var.environment}"
+  force_destroy       = var.environment == "dev"
+  object_lock_enabled = true
+}
+
+# S3 Versioning (Prerequisite for Object Lock and Tamper Prevention)
+resource "aws_s3_bucket_versioning" "traces" {
+  bucket = aws_s3_bucket.traces.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+# S3 Object Lock Configuration (7-Year Compliance Mode WORM Retention)
+resource "aws_s3_bucket_object_lock_configuration" "traces" {
+  bucket = aws_s3_bucket.traces.id
+  rule {
+    default_retention {
+      mode  = "COMPLIANCE"
+      years = 7
+    }
+  }
 }
 
 # Block Public Access for Traces Bucket

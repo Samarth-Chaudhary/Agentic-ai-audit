@@ -30,6 +30,8 @@ resource "aws_lambda_function" "audit_handler" {
       DYNAMODB_TABLE = aws_dynamodb_table.audit_results.name
       RESULTS_BUCKET = aws_s3_bucket.analytics_results.bucket
       SNS_TOPIC_ARN  = aws_sns_topic.high_risk_alerts.arn
+      DLQ_URL        = aws_sqs_queue.traces_dlq.url
+      TRACES_DLQ_URL = aws_sqs_queue.traces_dlq.url
     }
   }
 
@@ -38,12 +40,14 @@ resource "aws_lambda_function" "audit_handler" {
   }
 }
 
-# SQS -> Audit Lambda Event Source Mapping
+# SQS -> Audit Lambda Event Source Mapping (Batched with Partial Failure Reporting)
 resource "aws_lambda_event_source_mapping" "audit_sqs_trigger" {
-  event_source_arn = aws_sqs_queue.traces_queue.arn
-  function_name    = aws_lambda_function.audit_handler.arn
-  batch_size       = 1
-  enabled          = true
+  event_source_arn                   = aws_sqs_queue.traces_queue.arn
+  function_name                      = aws_lambda_function.audit_handler.arn
+  batch_size                         = 10
+  maximum_batching_window_in_seconds = 5
+  function_response_types            = ["ReportBatchItemFailures"]
+  enabled                            = true
 }
 
 # -----------------------------------------------------------------------------

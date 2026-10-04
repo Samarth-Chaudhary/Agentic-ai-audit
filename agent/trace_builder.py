@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from agent.validation import validate_trace_dict
-from auditor.models import StepType, Trace, TraceStep
+from auditor.models import StepType, Trace, TraceStep, compute_step_hash
 
 
 def _utcnow_iso() -> str:
@@ -45,17 +45,28 @@ class TraceBuilder:
     def current_step_count(self) -> int:
         return len(self._steps)
 
+    def _get_prev_step_hash(self) -> str:
+        """Get the hash of the last appended step, or genesis zero hash."""
+        if self._steps and self._steps[-1].step_hash:
+            return self._steps[-1].step_hash
+        return "0" * 64
+
     def add_assistant_message(
         self,
         content: str,
         timestamp: str | None = None,
     ) -> TraceStep:
         """Append an observable assistant message step."""
+        ts = timestamp or _utcnow_iso()
+        prev_hash = self._get_prev_step_hash()
+        step_hash = compute_step_hash(prev_hash, self.current_step_count, StepType.ASSISTANT_MESSAGE.value, content, ts)
         step = TraceStep(
             index=self.current_step_count,
             type=StepType.ASSISTANT_MESSAGE,
             content=content,
-            timestamp=timestamp or _utcnow_iso(),
+            timestamp=ts,
+            prev_step_hash=prev_hash,
+            step_hash=step_hash,
         )
         self._steps.append(step)
         return step
@@ -68,13 +79,18 @@ class TraceBuilder:
         timestamp: str | None = None,
     ) -> TraceStep:
         """Append a tool invocation step with paired call_id."""
+        ts = timestamp or _utcnow_iso()
+        prev_hash = self._get_prev_step_hash()
+        step_hash = compute_step_hash(prev_hash, self.current_step_count, StepType.TOOL_CALL.value, input_payload, ts)
         step = TraceStep(
             index=self.current_step_count,
             type=StepType.TOOL_CALL,
             tool_name=tool_name,
             input=input_payload,
             call_id=call_id or f"call-{uuid.uuid4().hex[:8]}",
-            timestamp=timestamp or _utcnow_iso(),
+            timestamp=ts,
+            prev_step_hash=prev_hash,
+            step_hash=step_hash,
         )
         self._steps.append(step)
         return step
@@ -87,13 +103,18 @@ class TraceBuilder:
         timestamp: str | None = None,
     ) -> TraceStep:
         """Append a tool result step with correlating call_id."""
+        ts = timestamp or _utcnow_iso()
+        prev_hash = self._get_prev_step_hash()
+        step_hash = compute_step_hash(prev_hash, self.current_step_count, StepType.TOOL_RESULT.value, output_payload, ts)
         step = TraceStep(
             index=self.current_step_count,
             type=StepType.TOOL_RESULT,
             tool_name=tool_name,
             output=output_payload,
             call_id=call_id,
-            timestamp=timestamp or _utcnow_iso(),
+            timestamp=ts,
+            prev_step_hash=prev_hash,
+            step_hash=step_hash,
         )
         self._steps.append(step)
         return step
@@ -106,13 +127,18 @@ class TraceBuilder:
         timestamp: str | None = None,
     ) -> TraceStep:
         """Append an observable execution error step."""
+        ts = timestamp or _utcnow_iso()
+        prev_hash = self._get_prev_step_hash()
+        step_hash = compute_step_hash(prev_hash, self.current_step_count, StepType.ERROR.value, message, ts)
         step = TraceStep(
             index=self.current_step_count,
             type=StepType.ERROR,
             message=message,
             error_code=error_code,
             details=details,
-            timestamp=timestamp or _utcnow_iso(),
+            timestamp=ts,
+            prev_step_hash=prev_hash,
+            step_hash=step_hash,
         )
         self._steps.append(step)
         return step
@@ -138,6 +164,8 @@ class TraceBuilder:
             # If no steps were recorded, add an initial message
             self.add_assistant_message("No actions were executed.")
 
+        merkle_root = self._steps[-1].step_hash if self._steps and self._steps[-1].step_hash else None
+
         trace_data: dict[str, Any] = {
             "trace_id": self.trace_id,
             "schema_version": self.schema_version,
@@ -147,6 +175,7 @@ class TraceBuilder:
             "metadata": self.metadata,
             "steps": [s.model_dump(mode="json") for s in self._steps],
             "final_answer": self._final_answer,
+            "merkle_root_hash": merkle_root,
         }
 
         if validate:

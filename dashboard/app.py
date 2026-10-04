@@ -16,8 +16,18 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+import importlib
+
 import pandas as pd
 import streamlit as st
+
+# Dynamic module reload ensures Streamlit daemon picks up updated modules on every rerun
+for mod_name in list(sys.modules.keys()):
+    if mod_name.startswith(("dashboard.", "auditor.")):
+        try:
+            importlib.reload(sys.modules[mod_name])
+        except Exception:
+            pass
 
 try:
     from dashboard.api_client import AuditApiClient
@@ -30,6 +40,8 @@ try:
     )
     from dashboard.components import (
         render_3d_trail_replay,
+        render_compliance_export_card,
+        render_cryptographic_integrity_card,
         render_degraded_banner,
         render_engine_badge,
         render_evidence_panel,
@@ -38,6 +50,7 @@ try:
         render_risk_badge,
         render_trace_timeline,
     )
+    from dashboard.theme import inject_theme
 except ImportError:
     from api_client import AuditApiClient  # type: ignore[no-redef]
     from athena_client import DashboardAthenaService  # type: ignore[no-redef]
@@ -49,6 +62,8 @@ except ImportError:
     )
     from components import (  # type: ignore[no-redef]
         render_3d_trail_replay,
+        render_compliance_export_card,
+        render_cryptographic_integrity_card,
         render_degraded_banner,
         render_engine_badge,
         render_evidence_panel,
@@ -57,6 +72,7 @@ except ImportError:
         render_risk_badge,
         render_trace_timeline,
     )
+    from theme import inject_theme  # type: ignore[no-redef]
 
 
 # Page configuration
@@ -70,9 +86,25 @@ st.set_page_config(
 
 def main() -> None:
     # -------------------------------------------------------------------------
-    # Sidebar: Mode Selection & Filters
+    # Centralized Glassmorphic Theme Injection
     # -------------------------------------------------------------------------
-    st.sidebar.title("⚙️ Dashboard Controls")
+    inject_theme()
+
+    # -------------------------------------------------------------------------
+    # Sidebar: Mode Selection & Filters (Reference Floating Sidebar Style)
+    # -------------------------------------------------------------------------
+    st.sidebar.markdown(
+        '<div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">'
+        '<span style="font-size:26px;">🛡️</span>'
+        '<div>'
+        '<div style="font-size:18px; font-weight:800; color:#111111; letter-spacing:-0.03em;">AGY Audit</div>'
+        '<div style="font-size:10.5px; color:#8E8E93; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Enterprise Assurance</div>'
+        '</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.sidebar.markdown("### ENVIRONMENT")
 
     # Mode Selector
     default_demo = os.environ.get("DEMO_MODE", "true").lower() in ("true", "1", "yes")
@@ -85,16 +117,20 @@ def main() -> None:
     is_demo_mode = data_mode == "Demo / Local Data"
 
     # API Base URL configuration if in Live mode
-    api_url = os.environ.get("API_GATEWAY_URL", "")
+    default_api_url = os.environ.get("API_GATEWAY_URL", "http://localhost:8000")
     if not is_demo_mode:
         api_url = st.sidebar.text_input(
             "API Gateway URL:",
-            value=api_url,
-            placeholder="https://<api-id>.execute-api.<region>.amazonaws.com/dev",
+            value=default_api_url,
+            placeholder="http://localhost:8000 or AWS API Gateway URL",
+            help="For 100% free local AWS pipeline, use http://localhost:8000. For cloud AWS, paste your API Gateway invoke URL.",
         )
+        st.sidebar.caption("💡 **Zero-Cost AWS Pipeline:** Run `python scripts/run_free_pipeline.py` in your terminal.")
+    else:
+        api_url = ""
 
     st.sidebar.divider()
-    st.sidebar.subheader("Filter Traces")
+    st.sidebar.markdown("### FILTERS")
 
     selected_task_type = st.sidebar.selectbox(
         "Task Type:",
@@ -120,11 +156,18 @@ def main() -> None:
 
     st.sidebar.divider()
     st.sidebar.markdown(
-        "### 🏛️ Governance Standards\n"
+        "### GOVERNANCE STANDARDS\n"
         "- **Scope Control:** Tool authorization & limits\n"
         "- **PII Control:** Presidio / Regex redaction\n"
         "- **Groundedness Control:** NLI factual entailment\n"
         "- **Risk Engine:** Composite weighted scoring\n"
+    )
+
+    st.sidebar.markdown(
+        '<div style="margin-top:20px; padding-top:12px; border-top:1px solid rgba(0,0,0,0.06); font-size:12px; font-weight:600; color:#737373; display:flex; align-items:center; gap:8px;">'
+        '⚙️ Settings & System Policies'
+        '</div>',
+        unsafe_allow_html=True,
     )
 
     # Initialize Services
@@ -148,17 +191,34 @@ def main() -> None:
     # -------------------------------------------------------------------------
     # Two Major Dashboard Tabs
     # -------------------------------------------------------------------------
-    tab_explorer, tab_analytics = st.tabs([
+    tab_explorer, tab_analytics, tab_replay = st.tabs([
         "🔍 TAB 1: Audit Explorer",
         "📊 TAB 2: Risk Analytics",
+        "🤖 TAB 3: Trail Replay",
     ])
 
     # =========================================================================
     # TAB 1: AUDIT EXPLORER (Operational Inspection)
     # =========================================================================
     with tab_explorer:
-        st.subheader("📋 Operational Trace Browser")
-        st.caption("Browse audited agent execution traces. Drill down to inspect steps, inline violations, and technical evidence.")
+        # Compact Header Strip
+        st.markdown(
+            '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; background:#FFFFFF; border-radius:18px; padding:12px 18px; border:1px solid rgba(0,0,0,0.06); box-shadow:0 2px 8px rgba(0,0,0,0.02);">'
+            '<div style="display:flex; align-items:center; gap:10px;">'
+            '<span style="font-size:18px;">🛡️</span>'
+            '<div>'
+            '<span style="font-size:14px; font-weight:800; color:#111111;">Operational Trace Explorer & Deep Audit</span>'
+            '<span style="font-size:11.5px; color:#737373; margin-left:10px;">Post-hoc multi-control policy verification</span>'
+            '</div>'
+            '</div>'
+            '<div style="display:flex; gap:6px;">'
+            '<span style="background:#F4F4F6; color:#111111; font-size:11px; font-weight:700; padding:3px 10px; border-radius:999px;">⚡ SCOPE</span>'
+            '<span style="background:#F4F4F6; color:#111111; font-size:11px; font-weight:700; padding:3px 10px; border-radius:999px;">🔒 PII</span>'
+            '<span style="background:#F4F4F6; color:#111111; font-size:11px; font-weight:700; padding:3px 10px; border-radius:999px;">📑 NLI</span>'
+            '</div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
 
         try:
             traces_list = api_client.list_traces(
@@ -177,115 +237,170 @@ def main() -> None:
         if not traces_list:
             st.info("No traces matched the selected filter criteria.")
         else:
-            # 1. Trace Table with audit summary columns
-            df_table = pd.DataFrame([
-                {
-                    "Trace ID": t["trace_id"],
-                    "Task Type": t["task_type"],
-                    "Date/Time": t.get("processed_at", ""),
-                    "Risk Score": f"{float(t['risk_score']):.1f}",
-                    "Risk Tier": t["risk_tier"],
-                    "Engine Mode": "⚠️ DEGRADED" if t.get("is_degraded") else "🛡️ Full ML",
-                    "Scope Issues": t.get("scope_violation_count", t.get("scope_violations", 0)),
-                    "PII Issues": t.get("pii_count", t.get("pii_findings", 0)),
-                    "Groundedness Issues": t.get("groundedness_failure_count", t.get("groundedness_failures", 0)),
-                }
-                for t in traces_list
-            ])
-
-            st.dataframe(
-                df_table,
-                use_container_width=True,
-                hide_index=True,
-            )
-
-            st.divider()
-
-            # 2. Trace Detail Selector
+            trace_map = {t["trace_id"]: t for t in traces_list}
             trace_ids = [t["trace_id"] for t in traces_list]
-            selected_trace_id = st.selectbox(
-                "Select a Trace for In-Depth Audit Inspection:",
-                options=trace_ids,
-                index=0,
+
+            # 2-Column Split: Left = Selection, Briefing & Crypto; Right = Timeline / Evidence / 3D State Space
+            col_left, col_right = st.columns([5, 7], gap="medium")
+
+            with col_left:
+                # 1. Trace Selector Dropdown with high-visibility formatting
+                selected_trace_id = st.selectbox(
+                    "Select Audited Execution Trace:",
+                    options=trace_ids,
+                    index=0,
+                    format_func=lambda tid: (
+                        f"{tid} — {trace_map[tid].get('task_type', '')} "
+                        f"[{trace_map[tid].get('risk_tier', 'LOW')} | Score: {float(trace_map[tid].get('risk_score', 0)):.1f}]"
+                    ),
+                )
+
+                # Quick Traces summary table (collapsible)
+                with st.expander("📋 View All Filtered Traces Summary", expanded=False):
+                    df_table = pd.DataFrame([
+                        {
+                            "Trace ID": t["trace_id"],
+                            "Task Type": t["task_type"],
+                            "Date/Time": t.get("processed_at", ""),
+                            "Risk Score": f"{float(t['risk_score']):.1f}",
+                            "Risk Tier": t["risk_tier"],
+                            "Engine Mode": "⚠️ DEGRADED" if t.get("is_degraded") else "🛡️ Full ML",
+                            "Scope Issues": t.get("scope_violation_count", t.get("scope_violations", 0)),
+                            "PII Issues": t.get("pii_count", t.get("pii_findings", 0)),
+                            "Groundedness Issues": t.get("groundedness_failure_count", t.get("groundedness_failures", 0)),
+                        }
+                        for t in traces_list
+                    ])
+                    st.dataframe(df_table, use_container_width=True, hide_index=True, height=140)
+
+                if selected_trace_id:
+                    try:
+                        trace_detail = api_client.get_trace(selected_trace_id)
+                    except KeyError:
+                        st.error(f"🔍 **Trace Not Found**: Trace '{selected_trace_id}' was not found.")
+                        trace_detail = None
+                    except ConnectionError as exc:
+                        st.error(f"⚠️ **API Connection Error**: {exc}")
+                        trace_detail = None
+                    except Exception as exc:
+                        st.error(f"⚠️ **Error Fetching Trace Details**: {exc}")
+                        trace_detail = None
+
+                    if trace_detail:
+                        raw_score = trace_detail.get("risk_score")
+                        if raw_score is None:
+                            raw_score = trace_detail.get("risk", {}).get("risk_score", 0.0)
+                        score = float(raw_score or 0.0)
+                        tier = str(trace_detail.get("risk_tier") or trace_detail.get("risk", {}).get("risk_tier", "LOW"))
+                        processed_at = trace_detail.get("processed_at", "N/A")
+                        summary = trace_detail.get("summary", "No summary generated.")
+                        is_degraded = bool(trace_detail.get("is_degraded", False))
+                        degraded_reasons = trace_detail.get("degraded_reasons", [])
+                        engine_info = trace_detail.get("engine_info")
+
+                        if is_degraded:
+                            render_degraded_banner(is_degraded=True, degraded_reasons=degraded_reasons)
+
+                        findings = trace_detail.get("findings", {})
+                        scope_count = len(findings.get("scope", []))
+                        pii_count = len(findings.get("pii", []))
+                        ground_count = len(findings.get("groundedness", []))
+
+                        where_steps = []
+                        for f in findings.get("scope", []):
+                            where_steps.append(f"Step {f.get('step_index', '?')} (Scope)")
+                        for f in findings.get("pii", []):
+                            where_steps.append(f"Step {f.get('step_index', '?')} (PII)")
+                        for f in findings.get("groundedness", []):
+                            ev = f.get('evidence_step_index') or f.get('evidence_step')
+                            where_steps.append(f"Step {ev if ev is not None else '?'} (Groundedness)")
+
+                        where_text = ", ".join(where_steps) if where_steps else "None (Trace is fully compliant)"
+
+                        # Compact Trace Verdict & Briefing Card
+                        with st.container(border=True):
+                            c_top1, c_top2 = st.columns([3, 2])
+                            with c_top1:
+                                st.markdown(f"### Trace `{trace_detail.get('trace_id')}`")
+                                st.caption(f"Task: `{trace_detail.get('task_type')}` | Processed: `{processed_at}`")
+                            with c_top2:
+                                st.markdown(render_risk_badge(tier, score), unsafe_allow_html=True)
+                                st.markdown(render_engine_badge(engine_info, is_degraded=is_degraded), unsafe_allow_html=True)
+
+                            st.markdown(f"**WHAT:** {summary}")
+                            st.markdown(f"**WHERE:** `{where_text}`")
+                            st.markdown(f"**WHY:** Risk score of {score:.1f} ({tier}) derived from {scope_count} scope violations, {pii_count} sensitive PII leaks, and {ground_count} groundedness issues.")
+
+                        # Cryptographic Integrity & Regulatory Compliance Attestation
+                        render_cryptographic_integrity_card(trace_detail)
+                        render_compliance_export_card(trace_detail)
+
+            with col_right:
+                if selected_trace_id and trace_detail:
+                    timeline = trace_detail.get("execution_timeline", [])
+                    findings = trace_detail.get("findings", {})
+
+                    # Deep Dive Sub-Tabs inside single card container
+                    sub_timeline, sub_evidence, sub_3d = st.tabs([
+                        "⏱️ Chronological Timeline",
+                        "📑 Policy Evidence Findings",
+                        "🌐 3D State Space Trajectory",
+                    ])
+
+                    with sub_timeline:
+                        render_trace_timeline(timeline, findings)
+
+                    with sub_evidence:
+                        render_evidence_panel(findings)
+
+                    with sub_3d:
+                        render_3d_trail_replay(timeline, findings)
+
+    # =========================================================================
+    # TAB 3: TRAIL REPLAY (Interactive 3D Isometric Bot Animation)
+    # =========================================================================
+    with tab_replay:
+        st.subheader("🤖 Interactive 3D Agent Trail Replay")
+        st.caption("Visual isometric replay of the agent's path, tool calls, data flow, and policy violations.")
+
+        import streamlit.components.v1 as components
+
+        try:
+            from dashboard.trail_replay import render_replay_html
+        except ImportError:
+            from trail_replay import render_replay_html
+
+        try:
+            replay_traces = api_client.list_traces(
+                task_type=task_filter,
+                risk_tier=tier_filter,
+                date_filter=date_filter,
+                limit=100,
+            )
+        except Exception:
+            replay_traces = []
+
+        if not replay_traces:
+            st.info("No traces available to replay matching current filter criteria.")
+        else:
+            trace_map = {t["trace_id"]: t for t in replay_traces}
+            selected_replay_id = st.selectbox(
+                "Select Trace to Replay:",
+                options=list(trace_map.keys()),
+                key="trail_replay_trace_selector",
+                format_func=lambda tid: f"{tid} — {trace_map[tid].get('task_type', '')} (Risk: {trace_map[tid].get('risk_tier', '')}, Score: {trace_map[tid].get('risk_score', '')})",
             )
 
-            if selected_trace_id:
+            if selected_replay_id:
                 try:
-                    trace_detail = api_client.get_trace(selected_trace_id)
-                except KeyError:
-                    st.error(f"🔍 **Trace Not Found**: Trace '{selected_trace_id}' was not found.")
-                    trace_detail = None
-                except ConnectionError as exc:
-                    st.error(f"⚠️ **API Connection Error**: {exc}")
-                    trace_detail = None
+                    replay_detail = api_client.get_trace(selected_replay_id)
                 except Exception as exc:
-                    st.error(f"⚠️ **Error Fetching Trace Details**: {exc}")
-                    trace_detail = None
+                    st.error(f"Failed to load trace {selected_replay_id}: {exc}")
+                    replay_detail = None
 
-                if trace_detail:
-                    raw_score = trace_detail.get("risk_score")
-                    if raw_score is None:
-                        raw_score = trace_detail.get("risk", {}).get("risk_score", 0.0)
-                    score = float(raw_score or 0.0)
-                    tier = str(trace_detail.get("risk_tier") or trace_detail.get("risk", {}).get("risk_tier", "LOW"))
-                    processed_at = trace_detail.get("processed_at", "N/A")
-                    summary = trace_detail.get("summary", "No summary generated.")
-                    is_degraded = bool(trace_detail.get("is_degraded", False))
-                    degraded_reasons = trace_detail.get("degraded_reasons", [])
-                    engine_info = trace_detail.get("engine_info")
-
-                    # Visible degraded mode warning banner if degraded
-                    if is_degraded:
-                        render_degraded_banner(is_degraded=True, degraded_reasons=degraded_reasons)
-
-                    with st.container(border=True):
-                        col_a, col_b = st.columns([2, 1])
-                        with col_a:
-                            st.markdown(f"### Trace `{trace_detail.get('trace_id')}`")
-                            st.write(f"**Task Classification:** `{trace_detail.get('task_type')}` | **Date/Time:** `{processed_at}`")
-                            st.info(f"**Audit Summary:** {summary}")
-                        with col_b:
-                            st.markdown(f"**Risk Evaluation:**\n\n{render_risk_badge(tier, score)}", unsafe_allow_html=True)
-                            st.caption(f"Score: {score:.1f} / 100.0")
-                            # Engine identity displayed directly next to risk evaluation
-                            st.markdown(render_engine_badge(engine_info, is_degraded=is_degraded), unsafe_allow_html=True)
-
-                    # 3. Reviewer UX Goal: WHAT, WHERE, WHY, EVIDENCE
-                    findings = trace_detail.get("findings", {})
-                    scope_count = len(findings.get("scope", []))
-                    pii_count = len(findings.get("pii", []))
-                    ground_count = len(findings.get("groundedness", []))
-
-                    where_steps = []
-                    for f in findings.get("scope", []):
-                        where_steps.append(f"Step {f.get('step_index', '?')} (Scope)")
-                    for f in findings.get("pii", []):
-                        where_steps.append(f"Step {f.get('step_index', '?')} (PII)")
-                    for f in findings.get("groundedness", []):
-                        ev = f.get('evidence_step_index') or f.get('evidence_step')
-                        where_steps.append(f"Step {ev if ev is not None else '?'} (Groundedness)")
-
-                    where_text = ", ".join(where_steps) if where_steps else "None (Trace is fully compliant)"
-
-                    with st.container(border=True):
-                        st.markdown("#### 🎯 Reviewer Audit Briefing")
-                        c_w1, c_w2 = st.columns(2)
-                        with c_w1:
-                            st.markdown(f"**WHAT Happened?**\n\n{summary}")
-                            st.markdown(f"**WHERE?**\n\n`{where_text}`")
-                        with c_w2:
-                            st.markdown(f"**WHY Flagged?**\n\nRisk score of {score:.1f} ({tier}) derived from: {scope_count} scope violations, {pii_count} sensitive PII leaks, {ground_count} groundedness issues.")
-                            st.markdown("**WHAT Evidence?**\n\nSee chronological step timeline and evidence tabs below for exact rule definitions and redacted excerpts.")
-
-                    # 4. Interactive 3D Agent Trail Replay & Chronological Timeline
-                    timeline = trace_detail.get("execution_timeline", [])
-                    render_3d_trail_replay(timeline, findings)
-                    render_trace_timeline(timeline, findings)
-
-                    st.write("")
-
-                    # 5. Technical Evidence Panel
-                    render_evidence_panel(findings)
+                if replay_detail:
+                    replay_html = render_replay_html(replay_detail)
+                    components.html(replay_html, height=780, scrolling=True)
 
     # =========================================================================
     # TAB 2: RISK ANALYTICS (Aggregate SQL & Athena)

@@ -58,3 +58,13 @@ tmp/
 .secrets/
 credentials.json
 
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+placeholder_lambda.zip
+
+# Local screenshots
+dashboard_*.png
+

@@ -1,0 +1,102 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://governance.audit.ai/schemas/compliance_certificate.schema.json",
+  "title": "ComplianceCertificate",
+  "description": "Formal regulatory and cryptographic compliance certificate for AI agent execution traces.",
+  "type": "object",
+  "required": [
+    "certificate_id",
+    "trace_id",
+    "task_type",
+    "generated_at",
+    "compliance_engine",
+    "overall_status",
+    "risk_score",
+    "risk_tier",
+    "integrity_attestation",
+    "framework_evaluations",
+    "violations_summary",
+    "digital_signature"
+  ],
+  "properties": {
+    "certificate_id": {
+      "type": "string",
+      "description": "Unique identifier for this attestation certificate."
+    },
+    "trace_id": {
+      "type": "string",
+      "description": "Correlated trace identifier."
+    },
+    "task_type": {
+      "type": "string",
+      "description": "Task classification type."
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 UTC timestamp of certificate generation."
+    },
+    "compliance_engine": {
+      "type": "string",
+      "description": "Engine and version that produced the certificate."
+    },
+    "overall_status": {
+      "type": "string",
+      "enum": ["PASS", "FLAGGED", "CRITICAL_VIOLATION"]
+    },
+    "risk_score": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 100.0
+    },
+    "risk_tier": {
+      "type": "string",
+      "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+    },
+    "integrity_attestation": {
+      "type": "object",
+      "required": ["is_valid", "merkle_root_hash", "steps_verified", "tampering_detected"],
+      "properties": {
+        "is_valid": { "type": "boolean" },
+        "merkle_root_hash": { "type": "string" },
+        "steps_verified": { "type": "integer", "minimum": 0 },
+        "tampering_detected": { "type": "boolean" },
+        "tamper_details": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "framework_evaluations": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["framework_name", "control_id", "status", "requirements", "evidence_summary"],
+        "properties": {
+          "framework_name": { "type": "string" },
+          "control_id": { "type": "string" },
+          "status": { "type": "string" },
+          "requirements": { "type": "string" },
+          "evidence_summary": { "type": "string" }
+        }
+      }
+    },
+    "violations_summary": {
+      "type": "object",
+      "properties": {
+        "scope_violations": { "type": "integer", "minimum": 0 },
+        "pii_leaks": { "type": "integer", "minimum": 0 },
+        "unsupported_groundedness_claims": { "type": "integer", "minimum": 0 },
+        "total_violations": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "pep_guardrail_active": {
+      "type": "boolean"
+    },
+    "digital_signature": {
+      "type": "string",
+      "description": "SHA-256 digital signature of the certificate payload."
+    }
+  },
+  "additionalProperties": false
+}

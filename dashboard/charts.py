@@ -1,4 +1,4 @@
-"""Plotly charting utilities for the Risk Analytics tab."""
+"""Monochrome Plotly charting utilities matching the iDraft Bento aesthetic."""
 
 from __future__ import annotations
 
@@ -8,18 +8,21 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
+# Strict monochrome palette with functional status colors
 TIER_COLORS = {
-    "LOW": "#10b981",
-    "MEDIUM": "#f59e0b",
-    "HIGH": "#f97316",
-    "CRITICAL": "#ef4444",
+    "LOW": "#10B981",       # Emerald / Compliant
+    "MEDIUM": "#F59E0B",    # Amber / Warning
+    "HIGH": "#737373",      # Graphite / High Risk
+    "CRITICAL": "#171717",  # Near-Black / Critical Risk
 }
 
 
 def chart_risk_distribution(df: pd.DataFrame) -> go.Figure:
-    """Render donut chart of trace distribution across risk tiers."""
+    """Render high-contrast ring/donut chart of trace distribution across risk tiers."""
     if df.empty or "risk_tier" not in df.columns:
         return go.Figure()
+
+    total_traces = int(df["trace_count"].sum()) if "trace_count" in df.columns else 0
 
     fig = px.pie(
         df,
@@ -27,16 +30,46 @@ def chart_risk_distribution(df: pd.DataFrame) -> go.Figure:
         values="trace_count",
         color="risk_tier",
         color_discrete_map=TIER_COLORS,
-        hole=0.45,
-        title="<b>Trace Distribution Across Risk Tiers</b>",
+        hole=0.70,
+        title="<b>Risk Tier Distribution</b>",
     )
-    fig.update_traces(textinfo="percent+label", hoverinfo="value+percent")
-    fig.update_layout(margin={"t": 50, "b": 20, "l": 20, "r": 20}, height=350)
+    fig.update_traces(
+        textinfo="percent",
+        hoverinfo="label+value+percent",
+        textfont={"family": "'Plus Jakarta Sans', 'Inter', sans-serif", "size": 12, "color": "#111111"},
+        marker={"line": {"color": "#FFFFFF", "width": 3}},
+    )
+    fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font={"family": "'Plus Jakarta Sans', 'Inter', sans-serif", "color": "#111111"},
+        title_font={"family": "'Plus Jakarta Sans', 'Inter', sans-serif", "size": 15, "color": "#111111"},
+        margin={"t": 45, "b": 10, "l": 10, "r": 10},
+        height=280,
+        showlegend=True,
+        legend={
+            "orientation": "h",
+            "yanchor": "bottom",
+            "y": -0.15,
+            "xanchor": "center",
+            "x": 0.5,
+            "font": {"size": 11, "color": "#737373"},
+        },
+        annotations=[
+            {
+                "text": f"<b>{total_traces}</b><br><span style='font-size:11px;color:#737373;'>Traces</span>",
+                "x": 0.5,
+                "y": 0.5,
+                "font": {"size": 22, "family": "'Plus Jakarta Sans', sans-serif", "color": "#111111"},
+                "showarrow": False,
+            }
+        ],
+    )
     return fig
 
 
 def chart_avg_risk_by_task(df: pd.DataFrame) -> go.Figure:
-    """Render horizontal bar chart of average risk score per task type."""
+    """Render horizontal bar chart of average risk score per task type in monochrome styling."""
     if df.empty or "task_type" not in df.columns:
         return go.Figure()
 
@@ -45,62 +78,124 @@ def chart_avg_risk_by_task(df: pd.DataFrame) -> go.Figure:
         x="avg_risk_score",
         y="task_type",
         orientation="h",
-        color="avg_risk_score",
-        color_continuous_scale=["#10b981", "#f59e0b", "#f97316", "#ef4444"],
-        range_color=[0, 100],
         title="<b>Average Risk Score by Task Type</b>",
         labels={"avg_risk_score": "Average Risk Score (0-100)", "task_type": "Task Type"},
         text="avg_risk_score",
+        color_discrete_sequence=["#171717"],
     )
-    fig.update_traces(texttemplate="%{text:.1f}", textposition="outside")
-    fig.update_layout(margin={"t": 50, "b": 20, "l": 20, "r": 20}, height=350)
+    fig.update_traces(
+        texttemplate="%{text:.1f}",
+        textposition="outside",
+        textfont={"family": "'Plus Jakarta Sans', 'Inter', sans-serif", "size": 12, "color": "#111111"},
+        marker={"line": {"color": "#171717", "width": 1}},
+    )
+    fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font={"family": "'Plus Jakarta Sans', 'Inter', sans-serif", "color": "#111111"},
+        title_font={"family": "'Plus Jakarta Sans', 'Inter', sans-serif", "size": 15, "color": "#111111"},
+        margin={"t": 45, "b": 20, "l": 20, "r": 20},
+        height=280,
+    )
+    fig.update_xaxes(
+        gridcolor="rgba(0, 0, 0, 0.05)",
+        tickfont={"family": "'Plus Jakarta Sans', sans-serif", "color": "#737373"},
+        title_font={"family": "'Plus Jakarta Sans', sans-serif", "color": "#111111", "size": 12},
+        range=[0, 105],
+    )
+    fig.update_yaxes(
+        tickfont={"family": "'Plus Jakarta Sans', sans-serif", "color": "#111111", "size": 12},
+        title_font={"family": "'Plus Jakarta Sans', sans-serif", "color": "#111111", "size": 12},
+    )
     return fig
 
 
 def chart_daily_risk_trend(df: pd.DataFrame) -> go.Figure:
-    """Render multi-line chart showing daily risk score trend and violation volume."""
+    """Render smooth spline area/line chart matching reference 'Weekly progress' aesthetic."""
     if df.empty or "date" not in df.columns:
         return go.Figure()
 
     fig = go.Figure()
 
-    # Average risk score line
+    # Smooth dark line with area gradient
     if "daily_avg_risk" in df.columns:
         fig.add_trace(
             go.Scatter(
                 x=df["date"],
                 y=df["daily_avg_risk"],
-                mode="lines+markers",
+                mode="lines",
                 name="Avg Risk Score",
-                line={"color": "#f97316", "width": 3},
+                line={"color": "#171717", "width": 3, "shape": "spline"},
+                fill="tozeroy",
+                fillcolor="rgba(23, 23, 23, 0.04)",
             )
         )
 
-    # High risk percentage line
+    annotations = []
+    if "daily_avg_risk" in df.columns and not df.empty:
+        max_idx = df["daily_avg_risk"].idxmax()
+        peak_row = df.loc[max_idx]
+        annotations.append({
+            "x": peak_row["date"],
+            "y": peak_row["daily_avg_risk"],
+            "text": f"<b>+{peak_row['daily_avg_risk']:.0f}% Peak</b>",
+            "showarrow": True,
+            "arrowhead": 0,
+            "ax": 0,
+            "ay": -28,
+            "bgcolor": "#171717",
+            "font": {"family": "'Plus Jakarta Sans', sans-serif", "size": 11, "color": "#FFFFFF"},
+            "borderpad": 4,
+            "bordercolor": "#171717",
+            "borderwidth": 1,
+            "arrowcolor": "#171717",
+        })
+
+    # High-Risk ratio line
     if "daily_high_risk_ratio" in df.columns:
         fig.add_trace(
             go.Scatter(
                 x=df["date"],
                 y=df["daily_high_risk_ratio"],
-                mode="lines+markers",
-                name="High/Critical Risk %",
-                line={"color": "#ef4444", "width": 2, "dash": "dot"},
+                mode="lines",
+                name="High Risk %",
+                line={"color": "#737373", "width": 2, "dash": "dot", "shape": "spline"},
             )
         )
 
     fig.update_layout(
-        title="<b>Daily Risk Score & High-Risk Violation Trends</b>",
-        xaxis_title="Date",
-        yaxis_title="Score / Percentage",
-        margin={"t": 50, "b": 20, "l": 20, "r": 20},
-        height=350,
-        legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1},
+        title="<b>Daily Risk Trend & Violation Volume</b>",
+        annotations=annotations,
+        xaxis_title="",
+        yaxis_title="Risk Score / Ratio",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font={"family": "'Plus Jakarta Sans', 'Inter', sans-serif", "color": "#111111"},
+        title_font={"family": "'Plus Jakarta Sans', 'Inter', sans-serif", "size": 15, "color": "#111111"},
+        margin={"t": 45, "b": 20, "l": 20, "r": 20},
+        height=280,
+        legend={
+            "orientation": "h",
+            "yanchor": "bottom",
+            "y": 1.02,
+            "xanchor": "right",
+            "x": 1,
+            "font": {"family": "'Plus Jakarta Sans', sans-serif", "color": "#737373", "size": 11},
+        },
+    )
+    fig.update_xaxes(
+        gridcolor="rgba(0, 0, 0, 0.04)",
+        tickfont={"family": "'Plus Jakarta Sans', sans-serif", "color": "#737373", "size": 11},
+    )
+    fig.update_yaxes(
+        gridcolor="rgba(0, 0, 0, 0.04)",
+        tickfont={"family": "'Plus Jakarta Sans', sans-serif", "color": "#737373", "size": 11},
     )
     return fig
 
 
 def chart_tool_violations(df: pd.DataFrame) -> go.Figure:
-    """Render bar chart of violations per tool name."""
+    """Render clean monochrome bar chart of tool-level violation counts."""
     if df.empty or "tool_name" not in df.columns:
         return go.Figure()
 
@@ -108,18 +203,36 @@ def chart_tool_violations(df: pd.DataFrame) -> go.Figure:
         df,
         x="tool_name",
         y="violation_count",
-        color="avg_risk_when_violated",
-        color_continuous_scale=["#f59e0b", "#f97316", "#ef4444"],
-        title="<b>Tool-Level Violation Frequency & Risk Severity</b>",
+        title="<b>Tool-Level Violation Frequency</b>",
         labels={
             "tool_name": "Invoked Tool",
             "violation_count": "Total Violations",
-            "avg_risk_when_violated": "Avg Risk Score",
         },
         text="violation_count",
+        color_discrete_sequence=["#171717"],
     )
-    fig.update_traces(textposition="outside")
-    fig.update_layout(margin={"t": 50, "b": 20, "l": 20, "r": 20}, height=350)
+    fig.update_traces(
+        textposition="outside",
+        textfont={"family": "'Plus Jakarta Sans', sans-serif", "size": 11, "color": "#111111"},
+    )
+    fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font={"family": "'Plus Jakarta Sans', 'Inter', sans-serif", "color": "#111111"},
+        title_font={"family": "'Plus Jakarta Sans', 'Inter', sans-serif", "size": 15, "color": "#111111"},
+        margin={"t": 45, "b": 20, "l": 20, "r": 20},
+        height=280,
+    )
+    fig.update_xaxes(
+        gridcolor="rgba(0, 0, 0, 0.04)",
+        tickfont={"family": "'Plus Jakarta Sans', sans-serif", "color": "#737373"},
+        title_font={"family": "'Plus Jakarta Sans', sans-serif", "color": "#111111", "size": 12},
+    )
+    fig.update_yaxes(
+        gridcolor="rgba(0, 0, 0, 0.04)",
+        tickfont={"family": "'Plus Jakarta Sans', sans-serif", "color": "#737373"},
+        title_font={"family": "'Plus Jakarta Sans', sans-serif", "color": "#111111", "size": 12},
+    )
     return fig
 
 
@@ -127,277 +240,124 @@ def chart_3d_trail_replay(
     timeline: list[dict[str, Any]],
     findings: dict[str, list[dict[str, Any]]],
 ) -> go.Figure:
-    """Render interactive 3D execution trail replay of agent trajectory.
-
-    Dimensions:
-    - X-axis: Chronological step sequence (0, 1, ..., N)
-    - Y-axis: Agent Execution Layer (User -> Thought -> Tool -> Observation -> Answer)
-    - Z-axis: Risk & Anomaly Severity Score (0 = Compliant, 10 = Critical Violation)
-    """
+    """Render interactive 3D execution trail replay in high-contrast dark space."""
     if not timeline:
-        empty_fig = go.Figure()
-        empty_fig.update_layout(
-            title="<b>3D Execution Trail (No steps recorded)</b>",
-            scene={
-                "xaxis_title": "Step",
-                "yaxis_title": "Layer",
-                "zaxis_title": "Risk",
-            },
-        )
-        return empty_fig
-
-    # Pre-index findings by step
-    scope_by_step: dict[int, list[dict[str, Any]]] = {}
-    for f in findings.get("scope", []):
-        idx = f.get("step_index")
-        if idx is not None:
-            scope_by_step.setdefault(idx, []).append(f)
-
-    pii_by_step: dict[int, list[dict[str, Any]]] = {}
-    for f in findings.get("pii", []):
-        idx = f.get("step_index")
-        if idx is not None:
-            pii_by_step.setdefault(idx, []).append(f)
-
-    ground_by_step: dict[int, list[dict[str, Any]]] = {}
-    for f in findings.get("groundedness", []):
-        ev = f.get("evidence_step_index") if f.get("evidence_step_index") is not None else f.get("evidence_step")
-        if ev is not None:
-            ground_by_step.setdefault(int(ev), []).append(f)
+        return go.Figure()
 
     layer_map = {
-        "USER_INPUT": (1.0, "User Prompt"),
-        "USER": (1.0, "User Prompt"),
-        "ASSISTANT": (2.0, "Reasoning"),
-        "ACTION": (2.0, "Reasoning"),
-        "AGENT": (2.0, "Reasoning"),
-        "TOOL_CALL": (3.0, "Tool Invocation"),
-        "CALL": (3.0, "Tool Invocation"),
-        "TOOL_RESULT": (4.0, "Observation"),
-        "OBSERVATION": (4.0, "Observation"),
-        "FINAL_ANSWER": (5.0, "Final Response"),
-        "ANSWER": (5.0, "Final Response"),
+        "user_message": 0,
+        "assistant_message": 1,
+        "tool_call": 2,
+        "tool_result": 3,
+        "final_answer": 4,
     }
+    layer_names = ["User Message", "Agent Reasoning", "Tool Call", "Tool Observation", "Final Answer"]
 
-    xs: list[float] = []
-    ys: list[float] = []
-    zs: list[float] = []
-    labels: list[str] = []
-    hover_texts: list[str] = []
-    node_colors: list[str] = []
-    node_sizes: list[int] = []
+    # Extract coordinates
+    x_steps = []
+    y_layers = []
+    z_risks = []
+    hover_texts = []
+    marker_colors = []
 
-    for i, step in enumerate(timeline):
-        step_idx = step.get("step_index", i)
-        raw_type = str(step.get("type", "UNKNOWN")).upper()
-        tool_name = step.get("tool_name", "")
+    scope_findings = findings.get("scope", [])
+    pii_findings = findings.get("pii", [])
+    groundedness_findings = findings.get("groundedness", [])
 
-        # Compute Y layer coordinate
-        y_val, layer_name = layer_map.get(raw_type, (2.5, "Execution"))
-        if tool_name:
-            if "RESULT" in raw_type or "OBSERVATION" in raw_type:
-                y_val, layer_name = 4.0, f"Tool Output ({tool_name})"
-            else:
-                y_val, layer_name = 3.0, f"Tool Call ({tool_name})"
+    for idx, step in enumerate(timeline):
+        s_idx = step.get("step_index", idx)
+        s_type = step.get("type", "assistant_message")
+        y_val = layer_map.get(s_type, 1)
 
-        # Compute Z risk severity
-        s_viol = scope_by_step.get(step_idx, [])
-        p_viol = pii_by_step.get(step_idx, [])
-        g_viol = ground_by_step.get(step_idx, [])
+        # Risk severity computation (0-10)
+        has_scope = any(f.get("step_index") == s_idx for f in scope_findings)
+        has_pii = any(f.get("step_index") == s_idx for f in pii_findings)
+        has_ground = any(f.get("evidence_step_index") == s_idx for f in groundedness_findings)
 
-        if p_viol:
-            z_val = 9.5
-            color = "#ef4444"  # Red
-            status_text = "CRITICAL PII LEAK"
-            size = 14
-        elif s_viol:
-            z_val = 7.0
-            color = "#f97316"  # Orange
-            status_text = "SCOPE VIOLATION"
-            size = 12
-        elif g_viol:
+        if has_pii:
+            z_val = 10.0
+            color = "#EF4444"
+        elif has_scope:
+            z_val = 7.5
+            color = "#F59E0B"
+        elif has_ground:
             z_val = 5.0
-            color = "#f59e0b"  # Amber
-            status_text = "UNGROUNDED CLAIM"
-            size = 12
+            color = "#F59E0B"
         else:
-            z_val = 1.0
-            color = "#10b981"  # Emerald Green
-            status_text = "COMPLIANT"
-            size = 10
+            z_val = 0.5
+            color = "#10B981"
 
-        xs.append(float(step_idx))
-        ys.append(y_val)
-        zs.append(z_val)
-        node_colors.append(color)
-        node_sizes.append(size)
+        x_steps.append(s_idx)
+        y_layers.append(y_val)
+        z_risks.append(z_val)
+        marker_colors.append(color)
 
-        step_title = f"Step {step_idx}: {layer_name}"
-        labels.append(step_title)
-
-        snippet = step.get("content") or step.get("observation") or ""
-        snippet_clean = (snippet[:100] + "...") if len(str(snippet)) > 100 else str(snippet)
-        hover_html = (
-            f"<b>{step_title}</b><br>"
-            f"<b>Status:</b> {status_text}<br>"
-            f"<b>Layer:</b> {layer_name}<br>"
-            f"<b>Risk Level:</b> {z_val:.1f} / 10.0<br>"
-            f"<b>Details:</b> {snippet_clean}"
-        )
-        hover_texts.append(hover_html)
+        desc = step.get("content") or step.get("tool_name") or s_type
+        hover_texts.append(f"Step {s_idx}: {s_type}<br>{desc}<br>Risk Level: {z_val}/10")
 
     fig = go.Figure()
 
-    # 1. 3D Trajectory Tube / Connecting Line
+    # Trajectory 3D path line
     fig.add_trace(
         go.Scatter3d(
-            x=xs,
-            y=ys,
-            z=zs,
+            x=x_steps,
+            y=y_layers,
+            z=z_risks,
             mode="lines",
-            line={"color": "#38bdf8", "width": 5},
             name="Execution Path",
+            line={"color": "#FFFFFF", "width": 4},
             hoverinfo="none",
         )
     )
 
-    # 2. 3D State Nodes
+    # 3D Node markers
     fig.add_trace(
         go.Scatter3d(
-            x=xs,
-            y=ys,
-            z=zs,
+            x=x_steps,
+            y=y_layers,
+            z=z_risks,
             mode="markers+text",
-            marker={
-                "size": node_sizes,
-                "color": node_colors,
-                "opacity": 0.95,
-                "line": {"color": "#ffffff", "width": 1},
-            },
-            text=[f"S{int(x)}" for x in xs],
+            name="Audit Steps",
+            text=[f"S{i}" for i in x_steps],
             textposition="top center",
-            textfont={"color": "#e2e8f0", "size": 10},
+            textfont={"size": 10, "color": "#FFFFFF"},
+            marker={"size": 7, "color": marker_colors, "symbol": "circle", "line": {"color": "#171717", "width": 1}},
             hovertext=hover_texts,
             hoverinfo="text",
-            name="Steps",
         )
     )
 
-    # Setup animation frames for step-by-step 3D trail replay
-    frames = []
-    for k in range(len(xs)):
-        frame_trace_line = go.Scatter3d(
-            x=xs[: k + 1],
-            y=ys[: k + 1],
-            z=zs[: k + 1],
-            mode="lines",
-            line={"color": "#38bdf8", "width": 6},
-        )
-        frame_trace_nodes = go.Scatter3d(
-            x=xs[: k + 1],
-            y=ys[: k + 1],
-            z=zs[: k + 1],
-            mode="markers+text",
-            marker={
-                "size": node_sizes[: k + 1],
-                "color": node_colors[: k + 1],
-                "opacity": 1.0,
-                "line": {"color": "#ffffff", "width": 1},
-            },
-            text=[f"S{int(x)}" for x in xs[: k + 1]],
-            textposition="top center",
-            textfont={"color": "#ffffff", "size": 11},
-            hovertext=hover_texts[: k + 1],
-            hoverinfo="text",
-        )
-        frames.append(go.Frame(data=[frame_trace_line, frame_trace_nodes], name=f"step_{k}"))
-
-    fig.frames = frames
-
-    # Play/Pause and Step Controls
-    sliders = [
-        {
-            "steps": [
-                {
-                    "method": "animate",
-                    "args": [[f"step_{k}"], {"mode": "immediate", "frame": {"duration": 350, "redraw": True}}],
-                    "label": f"Step {k}",
-                }
-                for k in range(len(xs))
-            ],
-            "active": len(xs) - 1,
-            "transition": {"duration": 200},
-            "x": 0.1,
-            "y": 0,
-            "currentvalue": {"font": {"size": 12, "color": "#94a3b8"}, "prefix": "Replay: ", "visible": True, "xanchor": "right"},
-            "len": 0.85,
-        }
-    ]
-
-    updatemenus = [
-        {
-            "type": "buttons",
-            "showactive": False,
-            "x": 0.0,
-            "y": 0,
-            "xanchor": "right",
-            "yanchor": "top",
-            "pad": {"t": 0, "r": 10},
-            "buttons": [
-                {
-                    "label": "▶ Play",
-                    "method": "animate",
-                    "args": [None, {"frame": {"duration": 450, "redraw": True}, "fromcurrent": True, "transition": {"duration": 200}}],
-                },
-                {
-                    "label": "⏸ Pause",
-                    "method": "animate",
-                    "args": [[None], {"mode": "immediate", "frame": {"duration": 0, "redraw": False}}],
-                },
-            ],
-        }
-    ]
-
     fig.update_layout(
-        title="<b>Interactive 3D Agent Trail Replay</b> (Play / Pause / Rotate)",
-        template="plotly_dark",
-        paper_bgcolor="rgba(15, 23, 42, 0.9)",
-        plot_bgcolor="rgba(15, 23, 42, 0.9)",
-        margin={"l": 10, "r": 10, "b": 10, "t": 40},
+        title="<b>Interactive 3D Agent Trajectory & State Space</b>",
+        paper_bgcolor="#171717",
+        plot_bgcolor="#171717",
+        font={"family": "'Plus Jakarta Sans', sans-serif", "color": "#FFFFFF"},
+        title_font={"size": 15, "color": "#FFFFFF"},
+        margin={"t": 50, "b": 20, "l": 20, "r": 20},
         height=480,
-        updatemenus=updatemenus,
-        sliders=sliders,
         scene={
             "xaxis": {
-                "title": "Execution Step",
-                "backgroundcolor": "rgba(30, 41, 59, 0.6)",
-                "gridcolor": "#334155",
-                "showbackground": True,
-                "zerolinecolor": "#475569",
+                "title": {"text": "Step Sequence (X)", "font": {"color": "#FFFFFF"}},
+                "backgroundcolor": "#171717",
+                "gridcolor": "#333333",
+                "tickfont": {"color": "#999999"},
             },
             "yaxis": {
-                "title": "Execution Layer",
-                "tickvals": [1.0, 2.0, 3.0, 4.0, 5.0],
-                "ticktext": ["User", "Reasoning", "Tool Call", "Tool Result", "Answer"],
-                "backgroundcolor": "rgba(30, 41, 59, 0.6)",
-                "gridcolor": "#334155",
-                "showbackground": True,
-                "zerolinecolor": "#475569",
+                "title": {"text": "Layer (Y)", "font": {"color": "#FFFFFF"}},
+                "tickvals": [0, 1, 2, 3, 4],
+                "ticktext": layer_names,
+                "backgroundcolor": "#171717",
+                "gridcolor": "#333333",
+                "tickfont": {"color": "#999999"},
             },
             "zaxis": {
-                "title": "Risk Severity (0-10)",
+                "title": {"text": "Risk Severity (Z)", "font": {"color": "#FFFFFF"}},
                 "range": [0, 11],
-                "backgroundcolor": "rgba(30, 41, 59, 0.6)",
-                "gridcolor": "#334155",
-                "showbackground": True,
-                "zerolinecolor": "#475569",
+                "backgroundcolor": "#171717",
+                "gridcolor": "#333333",
+                "tickfont": {"color": "#999999"},
             },
-            "camera": {
-                "eye": {"x": 1.65, "y": -1.55, "z": 0.95},
-            },
-            "aspectmode": "manual",
-            "aspectratio": {"x": 1.8, "y": 1.2, "z": 0.8},
+            "camera": {"eye": {"x": 1.6, "y": -1.6, "z": 1.2}},
         },
     )
     return fig
-

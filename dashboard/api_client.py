@@ -476,10 +476,16 @@ class AuditApiClient:
             base_url: API Gateway base URL (e.g. 'https://abc123.execute-api.us-east-1.amazonaws.com/dev').
             demo_mode: If True, uses local demonstration fixtures instead of network calls.
         """
-        self.base_url = (base_url or os.environ.get("API_GATEWAY_URL", "")).rstrip("/")
-        # Auto-enable demo mode if no API URL configured or DEMO_MODE env set
-        env_demo = os.environ.get("DEMO_MODE", "").lower() in ("true", "1", "yes")
-        self.demo_mode = demo_mode or env_demo or not self.base_url
+        raw_url = (base_url or os.environ.get("API_GATEWAY_URL", "")).strip().rstrip("/")
+        if raw_url.endswith("/traces"):
+            raw_url = raw_url[:-7].rstrip("/")
+        self.base_url = raw_url
+
+        # Auto-enable demo mode only if explicitly requested or if no API URL configured
+        if demo_mode or not self.base_url:
+            self.demo_mode = True
+        else:
+            self.demo_mode = False
 
     def _get_all_demo_traces(self) -> list[dict[str, Any]]:
         return DEMO_TRACES + load_local_generated_traces()
