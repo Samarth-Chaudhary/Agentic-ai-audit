@@ -2,6 +2,16 @@
 
 An automated, post-hoc governance, risk assessment, and audit trail analysis framework for autonomous AI agents.
 
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://agentic-ai-audit-j5rms43ryxjbaf6khkecvj.streamlit.app)
+[![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-3D%20Trajectory%20Portal-171717?logo=github)](https://samarth-chaudhary.github.io/Agentic-ai-audit/)
+[![CI Status](https://github.com/Samarth-Chaudhary/Agentic-ai-audit/actions/workflows/ci.yml/badge.svg)](https://github.com/Samarth-Chaudhary/Agentic-ai-audit/actions)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-black.svg)](LICENSE)
+
+> [!TIP]
+> **🚀 Live Interactive Streamlit App**: [https://agentic-ai-audit-j5rms43ryxjbaf6khkecvj.streamlit.app](https://agentic-ai-audit-j5rms43ryxjbaf6khkecvj.streamlit.app)  
+> **🌐 Live GitHub Pages Assurance Portal**: [https://samarth-chaudhary.github.io/Agentic-ai-audit/](https://samarth-chaudhary.github.io/Agentic-ai-audit/)  
+> **🎮 Standalone 3D Trail Replay**: [Interactive WebGL 3D Agent Trajectory](https://samarth-chaudhary.github.io/Agentic-ai-audit/assets/3d_replay.html)
+
 ---
 
 ## 1. 30-Second Summary
@@ -203,6 +213,8 @@ pytest tests/test_repositories.py tests/test_audit_handler.py -v
 ```
 
 ### 9.3 Launch Dashboard
+- **Live Cloud Deployment**: [https://agentic-ai-audit-j5rms43ryxjbaf6khkecvj.streamlit.app](https://agentic-ai-audit-j5rms43ryxjbaf6khkecvj.streamlit.app)
+- **Local Development**:
 ```bash
 streamlit run dashboard/app.py
 ```
